@@ -1,356 +1,74 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MKBAgenda | Premium Booking</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Minimalista</title>
     <style>
-        :root { 
-            --pink: #ff40b5; 
-            --pink-hover: #ff60c3;
-            --bg: #050505; 
-            --card: #111111; 
-            --text: #ffffff; 
-            --border: rgba(255,255,255,0.08); 
-            --green: #2ecc71; 
-            --red: #e74c3c;
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        :root {
+            --primary: #ff40b5; /* O rosa que você usa no MKB */
+            --bg: #050505;
+            --card: #111111;
+            --text: #ffffff;
         }
 
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; outline: none; }
-        
-        body { 
-            margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; 
-            display: flex; flex-direction: column; align-items: center; padding: 10px;
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
 
-        #google_translate_element { margin-bottom: 15px; min-height: 40px; }
-
-        #lang-alert {
-            background: var(--pink); color: white; padding: 8px 15px; border-radius: 10px;
-            font-size: 12px; font-weight: bold; margin-bottom: 10px; animation: bounce 2s infinite;
-            display: none; position: relative; text-align: center; z-index: 100;
+        .container {
+            text-align: center;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 400px;
+            width: 90%;
         }
-        #lang-alert::before { content: '▲'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: var(--pink); font-size: 14px; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
-        #loadingScreen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,64,181,0.1); border-top: 4px solid var(--pink); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
 
-        .card { background: var(--card); padding: 24px; border-radius: 24px; border: 1px solid var(--border); width: 100%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        p {
+            opacity: 0.8;
+            line-height: 1.6;
+        }
 
-        h2, h3 { color: var(--pink); text-align: center; margin: 0 0 15px 0; }
-        
-        .btn-main, .btn-home, .btn-sec { display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); cursor: pointer; font-weight: 600; border: none; }
-        .btn-home { width: 100%; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); margin-bottom: 12px; }
-        .btn-main { width: 100%; padding: 16px; background: var(--pink); color: #fff; border-radius: 14px; font-size: 16px; }
-        .btn-sec { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; font-size: 14px; }
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
 
-        .prof-selector-wrapper { position: relative; display: flex; align-items: center; width: 100%; margin-bottom: 15px; }
-        .prof-selector { display: flex; gap: 10px; overflow-x: auto; padding: 10px 35px; scrollbar-width: none; scroll-behavior: smooth; width: 100%; }
-        .prof-selector::-webkit-scrollbar { display: none; }
-        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(26, 26, 26, 0.9); color: white; border: 1px solid var(--border); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center; }
-        .prev-arrow { left: 0; } .next-arrow { right: 0; }
-        .prof-chip { padding: 10px 20px; background: #1a1a1a; border: 1px solid var(--border); border-radius: 50px; cursor: pointer; white-space: nowrap; font-size: 14px; }
-        .prof-chip.active { background: var(--pink); border-color: var(--pink); }
-
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
-        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); border-radius: 10px; cursor: pointer; font-size: 13px; }
-        .day.selected { background: var(--pink) !important; font-weight: bold; }
-        .day.past { opacity: 0.15; cursor: default; }
-        .day.has-hours { border: 1px solid rgba(255, 64, 181, 0.4); color: var(--pink); }
-
-        .hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 10px; margin-top: 20px; max-height: 320px; overflow-y: auto; }
-        .h-pill { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; text-align: center; padding: 14px 5px; cursor: pointer; position: relative; font-size: 14px; }
-        .h-pill.active { background: var(--pink); border-color: var(--pink); }
-        .h-pill.booked { background: #222; color: #fff; border: 1px solid var(--pink); }
-        .h-pill.expired-client { display: none !important; } /* Cliente não vê horário passado */
-        .h-pill.expired-admin { opacity: 0.5; } /* Admin vê com transparência mas vê os dados */
-
-        input { width: 100%; padding: 14px; margin-top: 12px; background: #000; color: #fff; border-radius: 12px; border: 1px solid var(--border); }
-        .hidden { display: none !important; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .btn:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
     </style>
 </head>
 <body>
 
-<div id="loadingScreen" class="hidden">
-    <div class="spinner"></div>
-    <span style="letter-spacing: 2px; font-weight: bold; font-size: 14px; color: var(--pink);">LOADING...</span>
-</div>
-
-<div id="google_translate_element"></div>
-<div id="lang-alert">You are in PT-BR, want to switch to English? Click here!</div>
-
-<div id="modalBooking" class="modal hidden">
-    <div class="card" style="max-width:380px; border-color: var(--pink);">
-        <h3 id="modalTitle">Confirm Booking</h3>
-        <p id="modalTimeLabel" style="text-align:center; opacity: 0.8; margin-bottom: 20px;"></p>
-        <input type="text" id="clientName" placeholder="Full Name">
-        <input type="text" id="clientService" placeholder="Service Desired">
-        <button class="btn-main" onclick="confirmBooking()" style="margin-top:20px;">🚀 CONFIRM</button>
-        <button class="btn-sec" style="width:100%; margin-top:12px;" onclick="closeModals()">Cancel</button>
-    </div>
-</div>
-
-<div id="modalAdminOptions" class="modal hidden">
-    <div class="card" style="max-width:380px;">
-        <h3>Slot Options</h3>
-        <p id="adminSlotLabel" style="text-align:center; margin-bottom:20px; font-weight:bold;"></p>
-        <button class="btn-main" onclick="openManualBooking()" style="margin-bottom:10px;">👤 Edit / Manual Booking</button>
-        <button class="btn-main" onclick="clearSlot()" style="background: var(--red); margin-bottom:10px;">🗑️ Deactivate / Delete Slot</button>
-        <button class="btn-sec" style="width:100%;" onclick="closeModals()">Back</button>
-    </div>
-</div>
-
-<div class="card">
-    <h2 id="empresaTitle">MKBAgenda</h2>
-
-    <div id="homeScreen">
-        <button class="btn-home" onclick="showScreen('profLogin')">👤 Professional Access</button>
-        <button class="btn-home" onclick="alert('Please use the link sent by your professional to book.')">🛍️ Client Area</button>
+    <div class="container">
+        <h1>Olá!</h1>
+        <p>Este é um modelo básico estruturado com HTML5 e CSS3. Pronto para ser expandido para seus projetos!</p>
+        <a href="#" class="btn">Começar Agora</a>
     </div>
 
-    <div id="profLogin" class="hidden">
-        <button class="btn-sec" onclick="showScreen('homeScreen')" style="margin-bottom:15px;">← Back</button>
-        <h3>Login</h3>
-        <input type="email" id="email" placeholder="E-mail">
-        <input type="password" id="pass" placeholder="Password">
-        <button class="btn-main" style="margin-top:20px;" onclick="login()">Enter Dashboard</button>
-    </div>
-
-    <div id="mainContent" class="hidden">
-        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">
-            <button class="btn-sec" onclick="logout()">Logout</button>
-            <span id="userLabel" style="font-size: 11px; color: var(--pink); font-weight: bold;"></span>
-        </div>
-        
-        <div id="admSection">
-            <input type="text" id="companyNameInput" placeholder="Business Name">
-            <input type="number" id="myPhone" placeholder="WhatsApp (Ex: 5521999999999)">
-            <button class="btn-main" style="margin-top:15px;" onclick="salvarConfig()">💾 Save Settings</button>
-            <h3 style="margin-top:30px;">Your Team</h3>
-            <div style="display:flex; gap:8px;"><input type="text" id="newMember" placeholder="Name..."><button class="btn-main" style="width:50px;" onclick="addMember()">+</button></div>
-            <div id="listaEquipe" style="margin-top:15px;"></div>
-            <button class="btn-main" style="margin-top:25px; background: var(--green); color:#000;" onclick="toggleLock()">📅 OPEN CALENDAR</button>
-        </div>
-
-        <div id="mainAgenda" class="hidden">
-            <button id="btnConfig" class="btn-sec" onclick="toggleLock()" style="width:100%; margin-bottom:15px;">⚙️ Settings</button>
-            <div class="prof-selector-wrapper">
-                <button class="nav-arrow prev-arrow" onclick="scrollSelector(-1)">◀</button>
-                <div class="prof-selector" id="profChips"></div>
-                <button class="nav-arrow next-arrow" onclick="scrollSelector(1)">▶</button>
-            </div>
-            <div style="display:flex; justify-content: space-between; align-items:center; margin: 10px 0;">
-                <button class="btn-sec" onclick="changeMonth(-1)">◀</button>
-                <b id="monthLabel" style="font-size: 16px;"></b>
-                <button class="btn-sec" onclick="changeMonth(1)">▶</button>
-            </div>
-            <div class="cal-grid" id="admCalendar"></div>
-            <div class="hours-grid" id="admHoursList"></div>
-            <button id="btnShare" class="btn-main" onclick="shareAgenda()" style="background: gold; color: #000; margin-top:25px;">🔗 COPY CLIENT LINK</button>
-        </div>
-    </div>
-</div>
-
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDZcwSrA4dmQY-XKVXQi_jXyz01aZhCr1Q",
-    authDomain: "mkbagenda-82701.firebaseapp.com",
-    databaseURL: "https://mkbagenda-82701-default-rtdb.firebaseio.com",
-    projectId: "mkbagenda-82701",
-    storageBucket: "mkbagenda-82701.firebasestorage.app",
-    messagingSenderId: "755222857201",
-    appId: "1:755222857201:web:1aef394b22919a78b4f050"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-function getNowBSB() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"})); }
-let equipe = [], agendaMaster = {}, activeProf = null, activeDay = null, tempHour = null, myPhone = "", companyName = "MKBAgenda", loggedUser = null, userToken = null, isLocked = false, isClientMode = false;
-let curMonth = getNowBSB().getMonth(), curYear = getNowBSB().getFullYear();
-
-function googleTranslateElementInit() { new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'pt,en,es', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element'); }
-function showLoading(status) { if (!isClientMode) status ? document.getElementById('loadingScreen').classList.remove('hidden') : document.getElementById('loadingScreen').classList.add('hidden'); }
-function showScreen(id) { document.querySelectorAll('.card > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-function closeModals() { document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden')); }
-
-async function login() {
-    const e = document.getElementById('email').value.trim().toLowerCase(), p = document.getElementById('pass').value;
-    const USERS = { "netosolucoes12@gmail.com": "jworg445566", "sarajanemkb@gmail.com": "jworg445566", "annatohesteticaebeleza@gmail.com": "665544", "milabarcellos21@gmail.com": "556644" };
-    if(USERS[e] === p) {
-        showLoading(true);
-        loggedUser = e.replace(/\./g, '_'); localStorage.setItem('mkb_logged_user', e);
-        await checkToken(loggedUser); 
-        setTimeout(() => { showLoading(false); showScreen('mainContent'); }, 800);
-    } else alert("Access Denied.");
-}
-
-async function checkToken(uid) {
-    const snap = await db.ref('tokens/'+uid).get();
-    userToken = snap.exists() ? snap.val() : "MKB-"+Math.floor(10000+Math.random()*89999);
-    if(!snap.exists()) { await db.ref('tokens/'+uid).set(userToken); await db.ref('tokenMap/'+userToken).set(uid); }
-    document.getElementById('userLabel').innerText = userToken;
-    loadData(uid);
-}
-
-function loadData(uid) {
-    db.ref('users/'+uid).on('value', s => {
-        const d = s.val() || {};
-        equipe = d.equipe || []; agendaMaster = d.agenda || {}; myPhone = d.phone || ""; companyName = d.companyName || "MKBAgenda";
-        document.getElementById('myPhone').value = myPhone;
-        document.getElementById('companyNameInput').value = companyName;
-        document.getElementById('empresaTitle').innerText = companyName;
-        if(!activeProf && equipe.length > 0) activeProf = equipe[0];
-        if(isClientMode) { isLocked = true; document.getElementById('admSection').classList.add('hidden'); document.getElementById('mainAgenda').classList.remove('hidden'); document.getElementById('btnConfig').classList.add('hidden'); }
-        updateUI();
-    });
-}
-
-function updateUI() { renderEquipe(); renderChips(); if(activeProf) { renderCalendar(); if(activeDay) renderHours(); } }
-
-function renderCalendar() {
-    const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
-    document.getElementById('monthLabel').innerText = `${monthNames[curMonth]} / ${curYear}`;
-    const days = new Date(curYear, curMonth+1, 0).getDate(), start = new Date(curYear, curMonth, 1).getDay();
-    const hoje = getNowBSB(); hoje.setHours(0,0,0,0);
-    for(let i=0; i<start; i++) grid.innerHTML += `<div></div>`;
-    for(let d=1; d<=days; d++) {
-        const df = new Date(curYear, curMonth, d), k = `${d}-${curMonth+1}-${curYear}`, isP = df < hoje;
-        const div = document.createElement('div');
-        div.className = `day ${agendaMaster[activeProf]?.[k]?'has-hours':''} ${activeDay===k?'selected':''} ${isP?'past':''}`;
-        div.innerText = d; if(!isP) div.onclick = () => { activeDay = k; updateUI(); };
-        grid.appendChild(div);
-    }
-}
-
-function renderHours() {
-    const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
-    const now = getNowBSB();
-    const [d, m, y] = activeDay.split('-').map(Number);
-    const dayData = agendaMaster[activeProf]?.[activeDay] || {};
-    
-    // Lista completa (5:00 - 23:30)
-    let fullHrs = Array.from({length: 38}, (_, i) => {
-        let h = Math.floor(i/2) + 5; let min = i%2 === 0 ? '00' : '30';
-        return `${h<10?'0'+h:h}:${min}`;
-    });
-
-    fullHrs.forEach(h => {
-        const info = dayData[h];
-        const [hour, min] = h.split(':').map(Number);
-        const slotDate = new Date(y, m-1, d, hour, min);
-        const isExpired = slotDate < now;
-
-        // REGRA DE OURO: 
-        // 1. Cliente nunca vê horário passado.
-        // 2. Cliente só vê se o profissional ativou (info existe).
-        if (isClientMode && (isExpired || !info)) return;
-
-        const p = document.createElement('div');
-        
-        // Classes de estilo
-        let statusClass = "";
-        if(info?.cliente) statusClass = "booked"; // Rosa com borda (reservado)
-        else if(info) statusClass = "active"; // Rosa (disponível)
-        
-        // Se passou do tempo, admin vê meio apagado, mas NUNCA some
-        const expiredAdminClass = (!isClientMode && isExpired) ? "expired-admin" : "";
-
-        p.className = `h-pill ${statusClass} ${expiredAdminClass}`;
-        p.innerHTML = `<b>${h}</b>${info?.cliente ? '<br><small style="font-size:9px;">'+info.cliente+'</small>' : ''}`;
-        
-        p.onclick = () => {
-            tempHour = h;
-            if(!isClientMode) { // Visão Admin
-                if(!isLocked) { // Setup (Ativar/Desativar)
-                    if(!agendaMaster[activeProf]) agendaMaster[activeProf] = {};
-                    if(!agendaMaster[activeProf][activeDay]) agendaMaster[activeProf][activeDay] = {};
-                    !agendaMaster[activeProf][activeDay][h] ? agendaMaster[activeProf][activeDay][h] = {s:"OK"} : delete agendaMaster[activeProf][activeDay][h];
-                    saveData(); updateUI();
-                } else { // Agenda aberta (Ações)
-                    if(info) { // Se está ativo, abre menu (mesmo se expirado, para você ver o cliente)
-                        document.getElementById('adminSlotLabel').innerText = `${activeDay} @ ${h}`;
-                        document.getElementById('modalAdminOptions').classList.remove('hidden');
-                    } else { // Se estava desligado, liga na hora
-                        if(!agendaMaster[activeProf]) agendaMaster[activeProf] = {};
-                        if(!agendaMaster[activeProf][activeDay]) agendaMaster[activeProf][activeDay] = {};
-                        agendaMaster[activeProf][activeDay][h] = {s:"OK"};
-                        saveData(); updateUI();
-                    }
-                }
-            } else if(!info?.cliente) { // Visão Cliente
-                openManualBooking();
-            }
-        };
-        grid.appendChild(p);
-    });
-}
-
-function openManualBooking() {
-    closeModals();
-    document.getElementById('modalTitle').innerText = isClientMode ? "Confirm Booking" : "Edit Slot";
-    document.getElementById('modalTimeLabel').innerText = `${activeDay} at ${tempHour}`;
-    const info = agendaMaster[activeProf]?.[activeDay]?.[tempHour];
-    document.getElementById('clientName').value = info?.cliente || "";
-    document.getElementById('clientService').value = info?.servico || "";
-    document.getElementById('modalBooking').classList.remove('hidden');
-}
-
-function clearSlot() {
-    if(agendaMaster[activeProf] && agendaMaster[activeProf][activeDay] && agendaMaster[activeProf][activeDay][tempHour]) {
-        delete agendaMaster[activeProf][activeDay][tempHour];
-        saveData(); updateUI(); closeModals();
-    }
-}
-
-function confirmBooking() {
-    const n = document.getElementById('clientName').value, s = document.getElementById('clientService').value;
-    if(!n) return alert("Enter Name");
-    if(!agendaMaster[activeProf][activeDay][tempHour]) agendaMaster[activeProf][activeDay][tempHour] = {s:"OK"};
-    agendaMaster[activeProf][activeDay][tempHour].cliente = n;
-    agendaMaster[activeProf][activeDay][tempHour].servico = s || "General";
-    saveData();
-    if(isClientMode) window.open(`https://wa.me/${myPhone}?text=${encodeURIComponent(`Booking: ${activeDay} - ${tempHour}\nName: ${n}\nService: ${s}`)}`);
-    closeModals(); updateUI();
-}
-
-function scrollSelector(direction) { document.getElementById('profChips').scrollBy({ left: direction * 150, behavior: 'smooth' }); }
-function renderChips() { const c = document.getElementById('profChips'); c.innerHTML = ""; equipe.forEach(p => { const ch = document.createElement('div'); ch.className = `prof-chip ${activeProf===p?'active':''}`; ch.innerText = p; ch.onclick = () => { activeProf = p; updateUI(); }; c.appendChild(ch); }); }
-function addMember() { const n = document.getElementById('newMember').value; if(n){ equipe.push(n); saveData(); document.getElementById('newMember').value=""; } }
-function renderEquipe() { const l = document.getElementById('listaEquipe'); l.innerHTML = ""; equipe.forEach((m, i) => { l.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)">${m} <b onclick="removeMember(${i})" style="color:red;cursor:pointer">✕</b></div>`; }); }
-function removeMember(i) { equipe.splice(i,1); saveData(); }
-function toggleLock() { isLocked = !isLocked; document.getElementById('admSection').classList.toggle('hidden'); document.getElementById('mainAgenda').classList.toggle('hidden'); updateUI(); }
-function saveData() { if(loggedUser) db.ref('users/'+loggedUser).update({ equipe, agenda: agendaMaster, phone: myPhone, companyName: document.getElementById('companyNameInput').value }); }
-function logout() { localStorage.clear(); location.reload(); }
-function changeMonth(v) { curMonth += v; if(curMonth>11){curMonth=0;curYear++} if(curMonth<0){curMonth=11;curYear--} renderCalendar(); }
-function salvarConfig() { saveData(); alert("Saved!"); }
-function shareAgenda() { navigator.clipboard.writeText(`https://agenda-mkb.netlify.app/?id=${userToken}`).then(() => alert("Link Copied!")); }
-
-window.onload = async () => {
-    const userLang = navigator.language || navigator.userLanguage;
-    if (userLang.startsWith('pt')) { document.getElementById('lang-alert').style.display = 'block'; setTimeout(() => document.getElementById('lang-alert').style.display = 'none', 6000); }
-    setTimeout(() => { let gt = document.createElement('script'); gt.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; document.body.appendChild(gt); }, 500);
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const idParam = urlParams.get('id');
-    if (idParam) { isClientMode = true; userToken = idParam; const snap = await db.ref('tokenMap/'+userToken).get(); if(snap.exists()) { loggedUser = snap.val(); loadData(loggedUser); showScreen('mainContent'); } }
-    else { const u = localStorage.getItem('mkb_logged_user'); if(u) { showLoading(true); loggedUser = u.replace(/\./g, '_'); await checkToken(loggedUser); showScreen('mainContent'); setTimeout(() => showLoading(false), 500); } else showScreen('homeScreen'); }
-    
-    setInterval(() => { if(activeDay) renderHours(); }, 30000);
-};
-</script>
 </body>
 </html>
