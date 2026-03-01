@@ -351,7 +351,7 @@ function salvarConfig() {
     alert("Saved!"); 
 }
 
-function shareAgenda() { navigator.clipboard.writeText(`https://agenda-mkb.netlify.app/?id=${userToken}`).then(() => alert("Link Copied!")); }
+function shareAgenda() { navigator.clipboard.writeText(`https://mkb-agenda.github.io/?id=${userToken}`).then(() => alert("Link Copied!")); }
 
 window.onload = async () => {
     const userLang = navigator.language || navigator.userLanguage;
