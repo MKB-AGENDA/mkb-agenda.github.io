@@ -3,367 +3,310 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MKBAgenda | Premium Booking</title>
+    <title>MKBAgenda | Premium</title>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        :root { 
-            --pink: #ff40b5; 
-            --pink-hover: #ff60c3;
-            --bg: #050505; 
-            --card: #111111; 
-            --text: #ffffff; 
-            --border: rgba(255,255,255,0.08); 
-            --green: #2ecc71; 
-            --red: #e74c3c;
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; outline: none; }
+        :root { --pink: #ff40b5; --bg: #050505; --card: #111111; --text: #ffffff; --border: rgba(255,255,255,0.12); --green: #2ecc71; --blue: #3498db; }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg); color: var(--text); padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
         
-        body { 
-            margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; 
-            display: flex; flex-direction: column; align-items: center; padding: 10px;
+        #empresaTitle { color: var(--blue); font-size: 28px; font-weight: 800; margin: 20px 0; text-align: center; width: 100%; }
+
+        .client-wrapper { display: flex; flex-direction: column; gap: 30px; width: 100%; max-width: 1100px; margin-top: 20px; }
+
+        @media (min-width: 850px) {
+            .client-wrapper { flex-direction: row; align-items: flex-start; justify-content: center; }
+            #clientProfileBox { flex: 1; max-width: 450px; position: sticky; top: 20px; text-align: left !important; }
+            #mainAgenda { flex: 1; max-width: 550px; }
         }
 
-        #google_translate_element { margin-bottom: 15px; min-height: 40px; }
+        #clientProfileBox { text-align: center; }
+        #displayPhoto { width: 100%; aspect-ratio: 1/1; border-radius: 30px; object-fit: cover; border: 1px solid var(--border); background: #1a1a1a; }
+        #displayBio { margin-top: 15px; font-size: 22px; font-weight: 700; color: #fff; }
 
-        #lang-alert {
-            background: var(--pink); color: white; padding: 8px 15px; border-radius: 10px;
-            font-size: 12px; font-weight: bold; margin-bottom: 10px; animation: bounce 2s infinite;
-            display: none; position: relative; text-align: center; z-index: 100;
-        }
-        #lang-alert::before { content: '▲'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: var(--pink); font-size: 14px; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+        .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
 
-        #loadingScreen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,64,181,0.1); border-top: 4px solid var(--pink); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .profile-upload { text-align: center; margin-bottom: 20px; }
+        #imgPreview { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 3px solid var(--pink); cursor: pointer; }
 
-        .card { background: var(--card); padding: 24px; border-radius: 24px; border: 1px solid var(--border); width: 100%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; font-size: 14px; }
+        .day.selected { background: var(--pink) !important; color: #fff; font-weight: bold; }
+        .day.has-hours { border: 2px solid var(--pink); color: var(--pink); }
 
-        h2, h3 { color: var(--pink); text-align: center; margin: 0 0 15px 0; }
-        
-        .btn-main, .btn-home, .btn-sec { display: flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition); cursor: pointer; font-weight: 600; border: none; }
-        .btn-home { width: 100%; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); margin-bottom: 12px; }
-        .btn-main { width: 100%; padding: 16px; background: var(--pink); color: #fff; border-radius: 14px; font-size: 16px; }
-        .btn-sec { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; font-size: 14px; }
+        .hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 450px; overflow-y: auto; padding-right: 5px; }
+        .h-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; text-align: center; padding: 15px 5px; cursor: pointer; font-weight: 600; font-size: 15px; }
+        .h-pill.active { border: 2px solid var(--pink) !important; color: var(--pink); }
+        .h-pill.booked { background: #222; opacity: 0.3; cursor: not-allowed; }
+        .h-pill.expired { background: #1a0000; color: #555; cursor: not-allowed; border: 1px dashed #333; }
 
-        .prof-selector-wrapper { position: relative; display: flex; align-items: center; width: 100%; margin-bottom: 15px; }
-        .prof-selector { display: flex; gap: 10px; overflow-x: auto; padding: 10px 35px; scrollbar-width: none; scroll-behavior: smooth; width: 100%; }
-        .prof-selector::-webkit-scrollbar { display: none; }
-        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(26, 26, 26, 0.9); color: white; border: 1px solid var(--border); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center; }
-        .prev-arrow { left: 0; } .next-arrow { right: 0; }
-        .prof-chip { padding: 10px 20px; background: #1a1a1a; border: 1px solid var(--border); border-radius: 50px; cursor: pointer; white-space: nowrap; font-size: 14px; }
-        .prof-chip.active { background: var(--pink); border-color: var(--pink); }
+        .btn-main { width: 100%; padding: 18px; border-radius: 16px; border:none; font-weight: 700; cursor: pointer; margin-top: 12px; font-size: 16px; transition: 0.2s; }
+        .btn-green { background: var(--green); color: #000; }
+        .btn-pink { background: var(--pink); color: #fff; }
+        .btn-sec { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border); padding: 10px 20px; border-radius: 12px; cursor: pointer; }
 
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
-        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); border-radius: 10px; cursor: pointer; font-size: 13px; }
-        .day.selected { background: var(--pink) !important; font-weight: bold; }
-        .day.past { opacity: 0.15; cursor: default; }
-        .day.has-hours { border: 1px solid rgba(255, 64, 181, 0.4); color: var(--pink); }
-
-        .hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 10px; margin-top: 20px; max-height: 320px; overflow-y: auto; }
-        .h-pill { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; text-align: center; padding: 14px 5px; cursor: pointer; position: relative; font-size: 14px; }
-        .h-pill.active { background: var(--pink); border-color: var(--pink); }
-        .h-pill.booked { background: #222; color: #fff; border: 1px solid var(--pink); }
-        .h-pill.expired-client { display: none !important; } 
-        .h-pill.expired-admin { opacity: 0.5; } 
-
-        input { width: 100%; padding: 14px; margin-top: 12px; background: #000; color: #fff; border-radius: 12px; border: 1px solid var(--border); }
+        input, textarea { width: 100%; padding: 16px; margin-top: 12px; background: #000; color: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
         .hidden { display: none !important; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 450px; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="loadingScreen" class="hidden">
-    <div class="spinner"></div>
-    <span style="letter-spacing: 2px; font-weight: bold; font-size: 14px; color: var(--pink);">LOADING...</span>
-</div>
+<h2 id="empresaTitle">MKBAgenda</h2>
 
-<div id="google_translate_element"></div>
-<div id="lang-alert">You are in PT-BR, want to switch to English? Click here!</div>
-
-<div id="modalBooking" class="modal hidden">
-    <div class="card" style="max-width:380px; border-color: var(--pink);">
-        <h3 id="modalTitle">Confirm Booking</h3>
-        <p id="modalTimeLabel" style="text-align:center; opacity: 0.8; margin-bottom: 20px;"></p>
-        <input type="text" id="clientName" placeholder="Full Name">
-        <input type="text" id="clientService" placeholder="Service Desired">
-        <button class="btn-main" onclick="confirmBooking()" style="margin-top:20px;">🚀 CONFIRM</button>
-        <button class="btn-sec" style="width:100%; margin-top:12px;" onclick="closeModals()">Cancel</button>
-    </div>
-</div>
-
-<div id="modalAdminOptions" class="modal hidden">
-    <div class="card" style="max-width:380px;">
-        <h3>Slot Options</h3>
-        <p id="adminSlotLabel" style="text-align:center; margin-bottom:20px; font-weight:bold;"></p>
-        <button class="btn-main" onclick="openManualBooking()" style="margin-bottom:10px;">👤 Edit / Manual Booking</button>
-        <button class="btn-main" onclick="clearSlot()" style="background: var(--red); margin-bottom:10px;">🗑️ Deactivate / Delete Slot</button>
-        <button class="btn-sec" style="width:100%;" onclick="closeModals()">Back</button>
-    </div>
-</div>
-
-<div class="card">
-    <h2 id="empresaTitle">MKBAgenda</h2>
-
-    <div id="homeScreen">
-        <button class="btn-home" onclick="showScreen('profLogin')">👤 Professional Access</button>
-        <button class="btn-home" onclick="alert('Please use the link sent by your professional to book.')">🛍️ Client Area</button>
+<div class="client-wrapper">
+    <div id="clientProfileBox" class="hidden">
+        <img id="displayPhoto" src="">
+        <div id="displayBio">Loading Profile...</div>
     </div>
 
-    <div id="profLogin" class="hidden">
-        <button class="btn-sec" onclick="showScreen('homeScreen')" style="margin-bottom:15px;">← Back</button>
-        <h3>Login</h3>
-        <input type="email" id="email" placeholder="E-mail">
-        <input type="password" id="pass" placeholder="Password">
-        <button class="btn-main" style="margin-top:20px;" onclick="login()">Enter Dashboard</button>
-    </div>
-
-    <div id="mainContent" class="hidden">
-        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">
-            <button class="btn-sec" onclick="logout()">Logout</button>
-            <span id="userLabel" style="font-size: 11px; color: var(--pink); font-weight: bold;"></span>
-        </div>
-        
-        <div id="admSection">
-            <input type="text" id="companyNameInput" placeholder="Business Name">
-            <input type="number" id="myPhone" placeholder="WhatsApp (Ex: 5521999999999)">
-            <button class="btn-main" style="margin-top:15px;" onclick="salvarConfig()">💾 Save Settings</button>
-            <h3 style="margin-top:30px;">Your Team</h3>
-            <div style="display:flex; gap:8px;"><input type="text" id="newMember" placeholder="Name..."><button class="btn-main" style="width:50px;" onclick="addMember()">+</button></div>
-            <div id="listaEquipe" style="margin-top:15px;"></div>
-            <button class="btn-main" style="margin-top:25px; background: var(--green); color:#000;" onclick="toggleLock()">📅 OPEN CALENDAR</button>
+    <div id="mainAgenda">
+        <div id="profLogin" class="card-inner">
+            <h3 style="text-align:center">Admin Login</h3>
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="pass" placeholder="Password">
+            <button class="btn-main btn-pink" onclick="login()">Login</button>
+            <p style="text-align:center; margin-top:15px; font-size:14px; color:#888;">
+                Don't have an account? <a href="javascript:void(0)" onclick="showScreen('profRegister')" style="color:var(--pink)">Create Account</a>
+            </p>
         </div>
 
-        <div id="mainAgenda" class="hidden">
-            <button id="btnConfig" class="btn-sec" onclick="toggleLock()" style="width:100%; margin-bottom:15px;">⚙️ Settings</button>
-            <div class="prof-selector-wrapper">
-                <button class="nav-arrow prev-arrow" onclick="scrollSelector(-1)">◀</button>
-                <div class="prof-selector" id="profChips"></div>
-                <button class="nav-arrow next-arrow" onclick="scrollSelector(1)">▶</button>
+        <div id="profRegister" class="hidden card-inner">
+            <h3 style="text-align:center">Create Your Agenda</h3>
+            <input type="email" id="regEmail" placeholder="Enter Email">
+            <input type="password" id="regPass" placeholder="Enter Password">
+            <div style="background:rgba(255,64,181,0.1); border:1px solid var(--pink); padding:15px; border-radius:12px; margin-top:15px; text-align:center;">
+                <p style="margin:0; font-weight:bold; color:var(--pink);">License: R$ 500,00</p>
             </div>
-            <div style="display:flex; justify-content: space-between; align-items:center; margin: 10px 0;">
+            <button class="btn-main btn-green" onclick="placeOrder()">PLACE ORDER</button>
+            <button class="btn-sec" onclick="showScreen('profLogin')" style="width:100%; margin-top:10px;">Back</button>
+        </div>
+
+        <div id="admSection" class="hidden card-inner">
+            <div style="display:flex; justify-content:space-between; align-items: center; margin-bottom: 20px;">
+                <button class="btn-sec" onclick="logout()">Logout</button>
+                <span id="tokenDisplay" style="color:var(--pink); font-weight: bold;"></span>
+            </div>
+            
+            <div class="profile-upload">
+                <img id="imgPreview" src="https://via.placeholder.com/150" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleImage(this)">
+            </div>
+
+            <input type="text" id="companyNameInput" placeholder="Business Name">
+            <input type="number" id="myPhone" placeholder="WhatsApp (Ex: 5521...)">
+            <textarea id="bioInput" placeholder="Bio / Description..." style="height: 100px;"></textarea>
+
+            <button class="btn-main btn-green" onclick="salvarConfig()">SAVE SETTINGS</button>
+            <button class="btn-main btn-pink" onclick="showScreen('agendaCore')">OPEN CALENDAR</button>
+        </div>
+
+        <div id="agendaCore" class="hidden card-inner">
+            <button id="btnBackEditor" class="btn-sec" onclick="showScreen('admSection')" style="width:100%; margin-bottom:15px;">⚙️ Back to Editor</button>
+            
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px;">
                 <button class="btn-sec" onclick="changeMonth(-1)">◀</button>
-                <b id="monthLabel" style="font-size: 16px;"></b>
+                <b id="monthLabel" style="font-size: 18px; text-transform: capitalize;"></b>
                 <button class="btn-sec" onclick="changeMonth(1)">▶</button>
             </div>
+
             <div class="cal-grid" id="admCalendar"></div>
             <div class="hours-grid" id="admHoursList"></div>
-            <button id="btnShare" class="btn-main" onclick="shareAgenda()" style="background: gold; color: #000; margin-top:25px;">🔗 COPY CLIENT LINK</button>
+
+            <button id="btnShare" class="btn-main hidden" onclick="shareAgenda()" style="background: #f1c40f; color: #000; margin-top: 25px;">🔗 COPY CLIENT LINK</button>
         </div>
+    </div>
+</div>
+
+<div id="modalBooking" class="modal hidden">
+    <div class="modal-content">
+        <h2 style="margin:0; color: var(--pink);">Book Service</h2>
+        <p id="modalTimeLabel" style="font-weight:600; margin: 15px 0; font-size: 18px;"></p>
+        <input type="text" id="clientName" placeholder="Your Name">
+        <textarea id="clientObservation" placeholder="Service details..." style="height: 100px;"></textarea>
+        <button class="btn-main btn-pink" onclick="confirmAndSend()">SEND TO WHATSAPP</button>
+        <button class="btn-sec" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
     </div>
 </div>
 
 <script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDZcwSrA4dmQY-XKVXQi_jXyz01aZhCr1Q",
-    authDomain: "mkbagenda-82701.firebaseapp.com",
-    databaseURL: "https://mkbagenda-82701-default-rtdb.firebaseio.com",
-    projectId: "mkbagenda-82701",
-    storageBucket: "mkbagenda-82701.firebasestorage.app",
-    messagingSenderId: "755222857201",
-    appId: "1:755222857201:web:1aef394b22919a78b4f050"
-};
+const firebaseConfig = { apiKey: "AIzaSyDZcwSrA4dmQY-XKVXQi_jXyz01aZhCr1Q", authDomain: "mkbagenda-82701.firebaseapp.com", databaseURL: "https://mkbagenda-82701-default-rtdb.firebaseio.com", projectId: "mkbagenda-82701", storageBucket: "mkbagenda-82701.firebasestorage.app", messagingSenderId: "755222857201", appId: "1:755222857201:web:1aef394b22919a78b4f050" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-function getNowBSB() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"})); }
-let equipe = [], agendaMaster = {}, activeProf = null, activeDay = null, tempHour = null, myPhone = "", companyName = "MKBAgenda", loggedUser = null, userToken = null, isLocked = false, isClientMode = false;
-let curMonth = getNowBSB().getMonth(), curYear = getNowBSB().getFullYear();
+let agendaMaster = {}, activeDay = null, tempHour = null, myPhone = "", companyName = "", loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
+let curMonth = new Date().getMonth(), curYear = new Date().getFullYear();
 
-function googleTranslateElementInit() { new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'pt,en,es', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element'); }
-function showLoading(status) { if (!isClientMode) status ? document.getElementById('loadingScreen').classList.remove('hidden') : document.getElementById('loadingScreen').classList.add('hidden'); }
-function showScreen(id) { document.querySelectorAll('.card > div').forEach(d => d.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-function closeModals() { document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden')); }
+function showScreen(id) {
+    document.querySelectorAll('.card-inner').forEach(el => el.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    if(id === 'agendaCore' && !isClientMode) document.getElementById('btnShare').classList.remove('hidden');
+}
+
+// Checkout via WhatsApp
+function placeOrder() {
+    const e = document.getElementById('regEmail').value;
+    const p = document.getElementById('regPass').value;
+    if(!e || !p) return alert("Please fill in both fields.");
+    const msg = `New Order: MKBAgenda Premium\nEmail: ${e}\nPassword: ${p}\nAmount: R$ 500,00`;
+    window.open(`https://wa.me/5521991455681?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function handleImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => { base64Image = e.target.result; document.getElementById('imgPreview').src = base64Image; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 
 async function login() {
     const e = document.getElementById('email').value.trim().toLowerCase(), p = document.getElementById('pass').value;
-    const USERS = { "netosolucoes12@gmail.com": "jworg445566", "sarajanemkb@gmail.com": "jworg445566", "annatohesteticaebeleza@gmail.com": "665544", "milabarcellos21@gmail.com": "556644" };
-    if(USERS[e] === p) {
-        showLoading(true);
-        loggedUser = e.replace(/\./g, '_'); localStorage.setItem('mkb_logged_user', e);
-        await checkToken(loggedUser); 
-        setTimeout(() => { showLoading(false); showScreen('mainContent'); }, 800);
-    } else alert("Access Denied.");
+    const USERS = { "netosolucoes12@gmail.com": "jworg445566", "sarajanemkb@gmail.com": "jworg445566" };
+    if(USERS[e] === p) { loggedUser = e.replace(/\./g, '_'); localStorage.setItem('mkb_user', e); await checkToken(loggedUser); showScreen('admSection'); } 
+    else alert("Login failed.");
 }
 
 async function checkToken(uid) {
     const snap = await db.ref('tokens/'+uid).get();
-    userToken = snap.exists() ? snap.val() : "MKB-"+Math.floor(10000+Math.random()*89999);
+    userToken = snap.exists() ? snap.val() : "MKB-"+Math.floor(10000+Math.random()*90000);
     if(!snap.exists()) { await db.ref('tokens/'+uid).set(userToken); await db.ref('tokenMap/'+userToken).set(uid); }
-    document.getElementById('userLabel').innerText = userToken;
     loadData(uid);
 }
 
 function loadData(uid) {
     db.ref('users/'+uid).on('value', s => {
-        const d = s.val() || {};
-        equipe = d.equipe || []; agendaMaster = d.agenda || {}; myPhone = d.phone || ""; companyName = d.companyName || "MKBAgenda";
-        document.getElementById('myPhone').value = myPhone;
-        document.getElementById('companyNameInput').value = companyName;
+        const d = s.val() || {}; agendaMaster = d.agenda || {}; myPhone = d.phone || ""; companyName = d.companyName || "Agenda";
+        base64Image = d.profilePhoto || "";
+        document.getElementById('displayPhoto').src = base64Image || "https://via.placeholder.com/400";
+        document.getElementById('displayBio').innerText = d.profileBio || "";
         document.getElementById('empresaTitle').innerText = companyName;
-        if(!activeProf && equipe.length > 0) activeProf = equipe[0];
-        if(isClientMode) { isLocked = true; document.getElementById('admSection').classList.add('hidden'); document.getElementById('mainAgenda').classList.remove('hidden'); document.getElementById('btnConfig').classList.add('hidden'); }
+        document.getElementById('tokenDisplay').innerText = "ID: " + (userToken || "");
+        if(!isClientMode) {
+            document.getElementById('companyNameInput').value = companyName;
+            document.getElementById('myPhone').value = myPhone;
+            document.getElementById('bioInput').value = d.profileBio || "";
+            if(base64Image) document.getElementById('imgPreview').src = base64Image;
+        }
         updateUI();
     });
 }
 
-function updateUI() { renderEquipe(); renderChips(); if(activeProf) { renderCalendar(); if(activeDay) renderHours(); } }
-
-function renderCalendar() {
-    const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
-    document.getElementById('monthLabel').innerText = `${monthNames[curMonth]} / ${curYear}`;
-    const days = new Date(curYear, curMonth+1, 0).getDate(), start = new Date(curYear, curMonth, 1).getDay();
-    const hoje = getNowBSB(); hoje.setHours(0,0,0,0);
-    for(let i=0; i<start; i++) grid.innerHTML += `<div></div>`;
-    for(let d=1; d<=days; d++) {
-        const df = new Date(curYear, curMonth, d), k = `${d}-${curMonth+1}-${curYear}`, isP = df < hoje;
-        const div = document.createElement('div');
-        div.className = `day ${agendaMaster[activeProf]?.[k]?'has-hours':''} ${activeDay===k?'selected':''} ${isP?'past':''}`;
-        div.innerText = d; if(!isP) div.onclick = () => { activeDay = k; updateUI(); };
-        grid.appendChild(div);
+function salvarConfig() {
+    companyName = document.getElementById('companyNameInput').value;
+    myPhone = document.getElementById('myPhone').value;
+    if(loggedUser) {
+        db.ref('users/'+loggedUser).update({ companyName, phone: myPhone, profileBio: document.getElementById('bioInput').value, profilePhoto: base64Image })
+        .then(() => alert("Saved!"));
     }
 }
 
+function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
+
+function renderCalendar() {
+    const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
+    document.getElementById('monthLabel').innerText = `${new Intl.DateTimeFormat('en-US', {month:'long'}).format(new Date(curYear, curMonth))} / ${curYear}`;
+    const days = new Date(curYear, curMonth+1, 0).getDate();
+    const start = new Date(curYear, curMonth, 1).getDay();
+    for(let i=0; i<start; i++) grid.innerHTML += `<div></div>`;
+    for(let d=1; d<=days; d++) {
+        const k = `${d}-${curMonth+1}-${curYear}`;
+        const div = document.createElement('div');
+        div.className = `day ${agendaMaster['Equipe']?.[k] ? 'has-hours' : ''} ${activeDay === k ? 'selected' : ''}`;
+        div.innerText = d; div.onclick = () => { activeDay = k; updateUI(); }; grid.appendChild(div);
+    }
+}
+
+// Brasília Auto-Expire Logic
+function isTimeExpired(day, time) {
+    const [d, m, y] = day.split('-').map(Number);
+    const [h, min] = time.split(':').map(Number);
+    const targetDate = new Date(y, m - 1, d, h, min);
+    const now = new Date();
+    const brTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    return brTime > targetDate;
+}
+
+// Expanded Hours: 05:00 to 23:30
 function renderHours() {
     const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
-    const now = getNowBSB();
-    if (!activeDay) return;
-    const [d, m, y] = activeDay.split('-').map(Number);
-    const dayData = agendaMaster[activeProf]?.[activeDay] || {};
-    
-    let fullHrs = Array.from({length: 38}, (_, i) => {
-        let h = Math.floor(i/2) + 5; let min = i%2 === 0 ? '00' : '30';
-        return `${h<10?'0'+h:h}:${min}`;
-    });
+    const dayData = agendaMaster['Equipe']?.[activeDay] || {};
+    const baseHours = [];
+    for(let i=5; i<=23; i++) {
+        const hh = i < 10 ? '0'+i : i;
+        baseHours.push(`${hh}:00`);
+        if(i < 23) baseHours.push(`${hh}:30`);
+        else baseHours.push(`23:30`);
+    }
 
-    fullHrs.forEach(h => {
+    baseHours.forEach(h => {
         const info = dayData[h];
-        const [hour, min] = h.split(':').map(Number);
-        const slotDate = new Date(y, m-1, d, hour, min);
-        const isExpired = slotDate < now;
-
-        if (isClientMode && (isExpired || !info)) return;
+        const expired = isTimeExpired(activeDay, h);
+        if(isClientMode && (!info || expired)) return;
 
         const p = document.createElement('div');
-        let statusClass = "";
-        if(info?.cliente) statusClass = "booked";
-        else if(info) statusClass = "active";
-        
-        const expiredAdminClass = (!isClientMode && isExpired) ? "expired-admin" : "";
-
-        p.className = `h-pill ${statusClass} ${expiredAdminClass}`;
-        p.innerHTML = `<b>${h}</b>${info?.cliente ? '<br><small style="font-size:9px;">'+info.cliente+'</small>' : ''}`;
+        p.className = `h-pill ${info ? 'active' : ''} ${info?.cliente ? 'booked' : ''} ${expired ? 'expired' : ''}`;
+        p.innerHTML = `<b>${h}</b>`;
         
         p.onclick = () => {
+            if(expired) return;
             tempHour = h;
-            if(!isClientMode) {
-                if(!isLocked) {
-                    if(!agendaMaster[activeProf]) agendaMaster[activeProf] = {};
-                    if(!agendaMaster[activeProf][activeDay]) agendaMaster[activeProf][activeDay] = {};
-                    !agendaMaster[activeProf][activeDay][h] ? agendaMaster[activeProf][activeDay][h] = {s:"OK"} : delete agendaMaster[activeProf][activeDay][h];
-                    saveData(); updateUI();
-                } else {
-                    if(info) {
-                        document.getElementById('adminSlotLabel').innerText = `${activeDay} @ ${h}`;
-                        document.getElementById('modalAdminOptions').classList.remove('hidden');
-                    } else {
-                        if(!agendaMaster[activeProf]) agendaMaster[activeProf] = {};
-                        if(!agendaMaster[activeProf][activeDay]) agendaMaster[activeProf][activeDay] = {};
-                        agendaMaster[activeProf][activeDay][h] = {s:"OK"};
-                        saveData(); updateUI();
-                    }
+            if(isClientMode) {
+                if(info && !info.cliente) {
+                    document.getElementById('modalTimeLabel').innerText = `${activeDay} at ${h}`;
+                    document.getElementById('modalBooking').classList.remove('hidden');
                 }
-            } else if(!info?.cliente) {
-                openManualBooking();
+            } else {
+                if(!agendaMaster['Equipe']) agendaMaster['Equipe'] = {};
+                if(!agendaMaster['Equipe'][activeDay]) agendaMaster['Equipe'][activeDay] = {};
+                if(info) delete agendaMaster['Equipe'][activeDay][h];
+                else agendaMaster['Equipe'][activeDay][h] = {s:"OK"};
+                db.ref('users/'+loggedUser).update({agenda: agendaMaster});
             }
         };
         grid.appendChild(p);
     });
 }
 
-function openManualBooking() {
-    closeModals();
-    document.getElementById('modalTitle').innerText = isClientMode ? "Confirm Booking" : "Edit Slot";
-    document.getElementById('modalTimeLabel').innerText = `${activeDay} at ${tempHour}`;
-    const info = agendaMaster[activeProf]?.[activeDay]?.[tempHour];
-    document.getElementById('clientName').value = info?.cliente || "";
-    document.getElementById('clientService').value = info?.servico || "";
-    document.getElementById('modalBooking').classList.remove('hidden');
+function confirmAndSend() {
+    const n = document.getElementById('clientName').value.trim();
+    const o = document.getElementById('clientObservation').value.trim();
+    if(!n || !o) return alert("Fill all fields.");
+    const txt = `Service: ${o}\nName: ${n}\nDate: ${activeDay} at ${tempHour}.`;
+    window.open(`https://wa.me/${myPhone}?text=${encodeURIComponent(txt)}`, '_blank');
+    agendaMaster['Equipe'][activeDay][tempHour] = { s: "OK", cliente: n, servico: o };
+    db.ref('users/'+loggedUser).update({agenda: agendaMaster}); closeModals();
 }
 
-function clearSlot() {
-    if(agendaMaster[activeProf] && agendaMaster[activeProf][activeDay] && agendaMaster[activeProf][activeDay][tempHour]) {
-        delete agendaMaster[activeProf][activeDay][tempHour];
-        saveData(); updateUI(); closeModals();
-    }
-}
-
-function confirmBooking() {
-    const n = document.getElementById('clientName').value, s = document.getElementById('clientService').value;
-    if(!n) return alert("Enter Name");
-    if(!agendaMaster[activeProf][activeDay][tempHour]) agendaMaster[activeProf][activeDay][tempHour] = {s:"OK"};
-    agendaMaster[activeProf][activeDay][tempHour].cliente = n;
-    agendaMaster[activeProf][activeDay][tempHour].servico = s || "General";
-    saveData();
-    if(isClientMode) window.open(`https://wa.me/${myPhone}?text=${encodeURIComponent(`Booking: ${activeDay} - ${tempHour}\nName: ${n}\nService: ${s}`)}`);
-    closeModals(); updateUI();
-}
-
-function scrollSelector(direction) { document.getElementById('profChips').scrollBy({ left: direction * 150, behavior: 'smooth' }); }
-function renderChips() { const c = document.getElementById('profChips'); c.innerHTML = ""; equipe.forEach(p => { const ch = document.createElement('div'); ch.className = `prof-chip ${activeProf===p?'active':''}`; ch.innerText = p; ch.onclick = () => { activeProf = p; updateUI(); }; c.appendChild(ch); }); }
-function addMember() { const n = document.getElementById('newMember').value; if(n){ equipe.push(n); saveData(); document.getElementById('newMember').value=""; } }
-function renderEquipe() { const l = document.getElementById('listaEquipe'); l.innerHTML = ""; equipe.forEach((m, i) => { l.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)">${m} <b onclick="removeMember(${i})" style="color:red;cursor:pointer">✕</b></div>`; }); }
-function removeMember(i) { equipe.splice(i,1); saveData(); }
-function toggleLock() { isLocked = !isLocked; document.getElementById('admSection').classList.toggle('hidden'); document.getElementById('mainAgenda').classList.toggle('hidden'); updateUI(); }
-
-// FUNÇÃO CORRIGIDA PARA SALVAR AMBOS
-function saveData() { 
-    if(loggedUser) {
-        db.ref('users/'+loggedUser).update({ 
-            equipe, 
-            agenda: agendaMaster, 
-            phone: myPhone, 
-            companyName: companyName 
-        }); 
-    }
+// GitHub Link Sharing
+function shareAgenda() { 
+    const githubLink = `https://mkb-agenda.github.io/?id=${userToken}`;
+    navigator.clipboard.writeText(githubLink).then(() => alert("Link copied: " + githubLink));
 }
 
 function logout() { localStorage.clear(); location.reload(); }
+function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
 function changeMonth(v) { curMonth += v; if(curMonth>11){curMonth=0;curYear++} if(curMonth<0){curMonth=11;curYear--} renderCalendar(); }
 
-// FUNÇÃO CORRIGIDA PARA ATUALIZAR VARIÁVEIS ANTES DE SALVAR
-function salvarConfig() { 
-    myPhone = document.getElementById('myPhone').value;
-    companyName = document.getElementById('companyNameInput').value;
-    saveData(); 
-    alert("Saved!"); 
-}
-
-function shareAgenda() { navigator.clipboard.writeText(`https://mkb-agenda.github.io/?id=${userToken}`).then(() => alert("Link Copied!")); }
-
 window.onload = async () => {
-    const userLang = navigator.language || navigator.userLanguage;
-    if (userLang.startsWith('pt')) { document.getElementById('lang-alert').style.display = 'block'; setTimeout(() => document.getElementById('lang-alert').style.display = 'none', 6000); }
-    setTimeout(() => { let gt = document.createElement('script'); gt.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; document.body.appendChild(gt); }, 500);
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const idParam = urlParams.get('id');
-    if (idParam) { isClientMode = true; userToken = idParam; const snap = await db.ref('tokenMap/'+userToken).get(); if(snap.exists()) { loggedUser = snap.val(); loadData(loggedUser); showScreen('mainContent'); } }
-    else { const u = localStorage.getItem('mkb_logged_user'); if(u) { showLoading(true); loggedUser = u.replace(/\./g, '_'); await checkToken(loggedUser); showScreen('mainContent'); setTimeout(() => showLoading(false), 500); } else showScreen('homeScreen'); }
-    
-    setInterval(() => { if(activeDay) renderHours(); }, 30000);
+    const id = new URLSearchParams(window.location.search).get('id');
+    if(id) {
+        isClientMode = true; 
+        document.getElementById('clientProfileBox').classList.remove('hidden');
+        document.getElementById('btnBackEditor').style.display = 'none';
+        document.getElementById('profLogin').style.display = 'none';
+        const snap = await db.ref('tokenMap/'+id).get();
+        if(snap.exists()) { loggedUser = snap.val(); loadData(loggedUser); showScreen('agendaCore'); }
+    } else {
+        const u = localStorage.getItem('mkb_user');
+        if(u) { loggedUser = u.replace(/\./g, '_'); await checkToken(loggedUser); showScreen('admSection'); }
+    }
 };
 </script>
 </body>
