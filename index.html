@@ -29,7 +29,6 @@
 
         .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
 
-        /* Photo Editor UI Corrigido */
         #photoEditor { display: none; position: relative; width: 300px; height: 300px; overflow: hidden; border-radius: 20px; background: #000; margin: 0 auto 15px; border: 2px solid var(--pink); cursor: move; }
         #imageToCrop { position: absolute; top: 50%; left: 50%; transform-origin: center; pointer-events: none; }
         .editor-controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
@@ -67,7 +66,7 @@
     </div>
 
     <div id="mainAgenda">
-        <div id="profLogin" class="card-inner">
+        <div id="profLogin" class="card-inner hidden">
             <h3 style="text-align:center">Admin Login</h3>
             <input type="email" id="email" placeholder="Email">
             <input type="password" id="pass" placeholder="Password">
@@ -89,7 +88,6 @@
                 <button class="btn-sec" onclick="logout()">Logout</button>
                 <b id="tokenDisplay" style="color:var(--pink)"></b>
             </div>
-
             <div style="text-align:center;">
                 <div id="photoEditor">
                     <img id="imageToCrop" src="">
@@ -104,18 +102,15 @@
                 <img id="imgPreview" src="https://via.placeholder.com/150" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--pink); cursor:pointer; margin-bottom: 10px;" onclick="document.getElementById('fileInput').click()">
                 <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="initPhotoEditor(this)">
             </div>
-
             <input type="text" id="companyNameInput" placeholder="Business Name">
             <input type="number" id="myPhone" placeholder="WhatsApp (5521...)">
             <textarea id="bioInput" placeholder="Bio description..."></textarea>
-            
             <h4 style="margin: 20px 0 10px;">Services</h4>
             <div id="servicesList"></div>
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <input type="text" id="newServiceInput" placeholder="Add Service" style="margin:0;">
                 <button class="btn-sec" onclick="addService()">Add</button>
             </div>
-
             <button class="btn-main btn-green" onclick="saveConfig()">SAVE SETTINGS</button>
             <button class="btn-main btn-pink" onclick="showScreen('agendaCore')">MANAGE CALENDAR</button>
         </div>
@@ -153,8 +148,6 @@ const db = firebase.database();
 
 let agendaMaster = {}, activeDay = null, tempHour = null, myPhone = "", services = [], loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
 let curMonth = new Date().getMonth(), curYear = new Date().getFullYear();
-
-// Photo Editor State
 let currentZoom = 1, imgPosX = 0, imgPosY = 0, isDragging = false, startX, startY;
 
 function showScreen(id) {
@@ -163,7 +156,7 @@ function showScreen(id) {
     if(id === 'agendaCore' && !isClientMode) document.getElementById('btnShare').classList.remove('hidden');
 }
 
-// NOVO PHOTO EDITOR CORRIGIDO
+// Editor de Foto
 function initPhotoEditor(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -181,19 +174,14 @@ function initPhotoEditor(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
-
 function adjustZoom(val) { currentZoom = Math.max(0.1, currentZoom + val); applyImgTransform(); }
-
 function applyImgTransform() {
     const img = document.getElementById('imageToCrop');
-    // Centraliza a imagem e aplica os offsets de arraste
     img.style.transform = `translate(-50%, -50%) translate(${imgPosX}px, ${imgPosY}px) scale(${currentZoom})`;
 }
-
 const editor = document.getElementById('photoEditor');
 editor.onmousedown = (e) => { isDragging = true; startX = e.clientX - imgPosX; startY = e.clientY - imgPosY; };
 editor.ontouchstart = (e) => { isDragging = true; startX = e.touches[0].clientX - imgPosX; startY = e.touches[0].clientY - imgPosY; };
-
 window.onmousemove = (e) => { if(isDragging) { imgPosX = e.clientX - startX; imgPosY = e.clientY - startY; applyImgTransform(); } };
 window.ontouchmove = (e) => { if(isDragging) { imgPosX = e.touches[0].clientX - startX; imgPosY = e.touches[0].clientY - startY; applyImgTransform(); } };
 window.onmouseup = window.ontouchend = () => isDragging = false;
@@ -203,21 +191,13 @@ function confirmCrop() {
     const ctx = canvas.getContext('2d');
     canvas.width = 500; canvas.height = 500;
     const img = document.getElementById('imageToCrop');
-    
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0,0,500,500);
-
-    // Cálculo exato para capturar o que está dentro do quadrado de 300px escalado para 500px
+    ctx.fillStyle = "#000"; ctx.fillRect(0,0,500,500);
     const scaleFactor = 500 / 300;
     const drawWidth = img.naturalWidth * currentZoom * scaleFactor;
     const drawHeight = img.naturalHeight * currentZoom * scaleFactor;
-    
-    // O 250 é o centro do canvas de 500
     const x = 250 + (imgPosX * scaleFactor) - (drawWidth / 2);
     const y = 250 + (imgPosY * scaleFactor) - (drawHeight / 2);
-
     ctx.drawImage(img, x, y, drawWidth, drawHeight);
-    
     base64Image = canvas.toDataURL('image/jpeg', 0.9);
     document.getElementById('imgPreview').src = base64Image;
     document.getElementById('imgPreview').classList.remove('hidden');
@@ -237,6 +217,7 @@ async function checkToken(uid) {
     userToken = snap.exists() ? snap.val() : "MKB-"+Math.floor(1000+Math.random()*9000);
     if(!snap.exists()) { await db.ref('tokens/'+uid).set(userToken); await db.ref('tokenMap/'+userToken).set(uid); }
     loadData(uid);
+    document.getElementById('tokenDisplay').innerText = userToken;
 }
 
 function loadData(uid) {
@@ -259,19 +240,11 @@ function loadData(uid) {
 
 function renderServicesEditor() {
     const list = document.getElementById('servicesList'); list.innerHTML = "";
-    services.forEach((s, i) => {
-        list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-top:5px; padding:10px; background:#222; border-radius:10px;">${s} <span onclick="removeService(${i})" style="color:red; cursor:pointer;">✖</span></div>`;
-    });
+    services.forEach((s, i) => { list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-top:5px; padding:10px; background:#222; border-radius:10px;">${s} <span onclick="removeService(${i})" style="color:red; cursor:pointer;">✖</span></div>`; });
 }
 function addService() { const v = document.getElementById('newServiceInput').value; if(v){services.push(v); document.getElementById('newServiceInput').value=""; renderServicesEditor();} }
 function removeService(i) { services.splice(i,1); renderServicesEditor(); }
-
-function saveConfig() {
-    db.ref('users/'+loggedUser).update({ 
-        companyName: document.getElementById('companyNameInput').value, phone: document.getElementById('myPhone').value, 
-        profileBio: document.getElementById('bioInput').value, profilePhoto: base64Image, services: services 
-    }).then(() => alert("Saved!"));
-}
+function saveConfig() { db.ref('users/'+loggedUser).update({ companyName: document.getElementById('companyNameInput').value, phone: document.getElementById('myPhone').value, profileBio: document.getElementById('bioInput').value, profilePhoto: base64Image, services: services }).then(() => alert("Saved!")); }
 
 function renderCalendar() {
     const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
@@ -329,30 +302,42 @@ function confirmBooking() {
         closeModals();
     });
 }
-
-function cancelBooking(h) {
-    if(confirm("Deseja desmarcar?")) {
-        agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
-        db.ref('users/'+loggedUser).update({agenda: agendaMaster});
-    }
-}
-
+function cancelBooking(h) { if(confirm("Deseja desmarcar?")) { agendaMaster['Master'][activeDay][h] = {s:"OPEN"}; db.ref('users/'+loggedUser).update({agenda: agendaMaster}); } }
 function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
 function logout() { localStorage.clear(); location.reload(); }
 function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
 function changeMonth(v) { curMonth += v; renderCalendar(); }
-function shareAgenda() { navigator.clipboard.writeText(`https://mkb-agenda.github.io/?id=${userToken}`).then(() => alert("Link copiado!")); }
+
+// FUNÇÃO ATUALIZADA: Detecta a URL atual e gera o link dinâmico
+function shareAgenda() { 
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?id=${userToken}`;
+    navigator.clipboard.writeText(shareUrl).then(() => alert("Link copiado: " + shareUrl)); 
+}
+
 function placeOrder() { window.open(`https://wa.me/5521991455681?text=Quero adquirir minha licença MKBAgenda`, '_blank'); }
 
 window.onload = async () => {
     const id = new URLSearchParams(window.location.search).get('id');
+    const savedUser = localStorage.getItem('mkb_user');
+
     if(id) {
-        isClientMode = true; document.getElementById('clientProfileBox').classList.remove('hidden');
+        isClientMode = true;
+        document.getElementById('clientProfileBox').classList.remove('hidden');
         const snap = await db.ref('tokenMap/'+id).get();
-        if(snap.exists()) { loggedUser = snap.val(); loadData(loggedUser); showScreen('agendaCore'); }
+        if(snap.exists()) {
+            loggedUser = snap.val();
+            loadData(loggedUser);
+            showScreen('agendaCore');
+        } else {
+            alert("Agenda não encontrada");
+        }
+    } else if(savedUser) {
+        loggedUser = savedUser.replace(/\./g, '_');
+        await checkToken(loggedUser);
+        showScreen('admSection');
     } else {
-        const u = localStorage.getItem('mkb_user');
-        if(u) { loggedUser = u.replace(/\./g, '_'); await checkToken(loggedUser); showScreen('admSection'); }
+        document.getElementById('profLogin').classList.remove('hidden');
     }
 };
 </script>
