@@ -20,40 +20,40 @@
 
         @media (min-width: 850px) {
             .client-wrapper { flex-direction: row; align-items: flex-start; justify-content: center; }
-            #clientProfileBox { flex: 1; max-width: 450px; position: sticky; top: 20px; text-align: left !important; }
-            #mainAgenda { flex: 1; max-width: 550px; }
+            #clientProfileBox { flex: 1; max-width: 400px; position: sticky; top: 20px; text-align: left !important; }
+            #mainAgenda { flex: 1; max-width: 600px; }
         }
 
         #clientProfileBox { text-align: center; }
         #displayPhoto { width: 100%; aspect-ratio: 1/1; border-radius: 30px; object-fit: cover; border: 1px solid var(--border); background: #1a1a1a; }
-        #displayBio { margin-top: 15px; font-size: 22px; font-weight: 700; color: #fff; }
+        #displayBio { margin-top: 15px; font-size: 20px; font-weight: 700; color: #fff; }
 
         .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
 
-        .profile-upload { text-align: center; margin-bottom: 20px; }
-        #imgPreview { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 3px solid var(--pink); cursor: pointer; }
-
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
-        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; font-size: 14px; }
-        .day.selected { background: var(--pink) !important; color: #fff; font-weight: bold; }
-        .day.has-hours { border: 2px solid var(--pink); color: var(--pink); }
-
-        .hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 450px; overflow-y: auto; padding-right: 5px; }
+        /* Hours Grid */
+        .hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
         .h-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; text-align: center; padding: 15px 5px; cursor: pointer; font-weight: 600; font-size: 15px; }
         .h-pill.active { border: 2px solid var(--pink) !important; color: var(--pink); }
-        .h-pill.booked { background: #222; opacity: 0.3; cursor: not-allowed; }
-        .h-pill.expired { background: #1a0000; color: #555; cursor: not-allowed; border: 1px dashed #333; }
+        .h-pill.expired { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
-        .btn-main { width: 100%; padding: 18px; border-radius: 16px; border:none; font-weight: 700; cursor: pointer; margin-top: 12px; font-size: 16px; transition: 0.2s; }
-        .btn-green { background: var(--green); color: #000; }
+        /* Calendar */
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; }
+        .day.selected { background: var(--pink) !important; color: #fff; }
+
+        /* Inputs */
+        input, textarea, select { width: 100%; padding: 16px; margin-top: 12px; background: #000; color: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
+        .btn-main { width: 100%; padding: 18px; border-radius: 16px; border:none; font-weight: 700; cursor: pointer; margin-top: 12px; font-size: 16px; }
         .btn-pink { background: var(--pink); color: #fff; }
-        .btn-sec { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border); padding: 10px 20px; border-radius: 12px; cursor: pointer; }
+        .btn-green { background: var(--green); color: #000; }
+        .btn-sec { background: rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; }
 
-        input, textarea { width: 100%; padding: 16px; margin-top: 12px; background: #000; color: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
         .hidden { display: none !important; }
-
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 450px; text-align: center; }
+        
+        /* Modal Booking Customization */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 480px; }
+        .modal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     </style>
 </head>
 <body>
@@ -63,74 +63,80 @@
 <div class="client-wrapper">
     <div id="clientProfileBox" class="hidden">
         <img id="displayPhoto" src="">
-        <div id="displayBio">Loading Profile...</div>
+        <div id="displayBio">Loading...</div>
     </div>
 
     <div id="mainAgenda">
         <div id="profLogin" class="card-inner">
             <h3 style="text-align:center">Admin Login</h3>
-            <input type="email" id="email" placeholder="Email Address">
+            <input type="email" id="email" placeholder="Email">
             <input type="password" id="pass" placeholder="Password">
             <button class="btn-main btn-pink" onclick="login()">Login</button>
-            <p style="text-align:center; margin-top:15px; font-size:14px; color:#888;">
-                Don't have an account? <a href="javascript:void(0)" onclick="showScreen('profRegister')" style="color:var(--pink)">Create Account</a>
-            </p>
+            <p style="text-align:center; font-size:14px; margin-top:15px; color:#888;">No account? <a href="javascript:void(0)" onclick="showScreen('profRegister')" style="color:var(--pink)">Create Account</a></p>
         </div>
 
         <div id="profRegister" class="hidden card-inner">
-            <h3 style="text-align:center">Create Your Agenda</h3>
-            <input type="email" id="regEmail" placeholder="Enter Email">
-            <input type="password" id="regPass" placeholder="Enter Password">
-            <div style="background:rgba(255,64,181,0.1); border:1px solid var(--pink); padding:15px; border-radius:12px; margin-top:15px; text-align:center;">
-                <p style="margin:0; font-weight:bold; color:var(--pink);">License: R$ 500,00</p>
-            </div>
-            <button class="btn-main btn-green" onclick="placeOrder()">PLACE ORDER</button>
+            <h3 style="text-align:center">New Account</h3>
+            <input type="email" id="regEmail" placeholder="New Email">
+            <input type="password" id="regPass" placeholder="New Password">
+            <div style="background:rgba(255,64,181,0.1); padding:15px; border-radius:12px; margin-top:15px; text-align:center; color:var(--pink);">License: R$ 500,00</div>
+            <button class="btn-main btn-green" onclick="placeOrder()">REQUEST ACCESS</button>
             <button class="btn-sec" onclick="showScreen('profLogin')" style="width:100%; margin-top:10px;">Back</button>
         </div>
 
         <div id="admSection" class="hidden card-inner">
-            <div style="display:flex; justify-content:space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
                 <button class="btn-sec" onclick="logout()">Logout</button>
-                <span id="tokenDisplay" style="color:var(--pink); font-weight: bold;"></span>
+                <b id="tokenDisplay" style="color:var(--pink)"></b>
             </div>
-            
-            <div class="profile-upload">
-                <img id="imgPreview" src="https://via.placeholder.com/150" onclick="document.getElementById('fileInput').click()">
-                <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleImage(this)">
+
+            <div style="text-align:center; margin-bottom: 20px;">
+                <img id="imgPreview" src="https://via.placeholder.com/150" style="width:140px; height:140px; border-radius:50%; border:3px solid var(--pink); cursor:pointer;" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImage(this)">
             </div>
 
             <input type="text" id="companyNameInput" placeholder="Business Name">
-            <input type="number" id="myPhone" placeholder="WhatsApp (Ex: 5521...)">
-            <textarea id="bioInput" placeholder="Bio / Description..." style="height: 100px;"></textarea>
+            <input type="number" id="myPhone" placeholder="WhatsApp (5521...)">
+            <textarea id="bioInput" placeholder="Bio description..."></textarea>
 
-            <button class="btn-main btn-green" onclick="salvarConfig()">SAVE SETTINGS</button>
+            <h4 style="margin: 20px 0 10px;">Manage Services</h4>
+            <div id="servicesList"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <input type="text" id="newServiceInput" placeholder="Service Name (e.g. Haircut)" style="margin:0;">
+                <button class="btn-sec" onclick="addService()" style="background:var(--blue);">Add</button>
+            </div>
+
+            <button class="btn-main btn-green" onclick="saveConfig()" style="margin-top:30px;">SAVE ALL SETTINGS</button>
             <button class="btn-main btn-pink" onclick="showScreen('agendaCore')">OPEN CALENDAR</button>
         </div>
 
         <div id="agendaCore" class="hidden card-inner">
             <button id="btnBackEditor" class="btn-sec" onclick="showScreen('admSection')" style="width:100%; margin-bottom:15px;">⚙️ Back to Editor</button>
-            
             <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px;">
                 <button class="btn-sec" onclick="changeMonth(-1)">◀</button>
-                <b id="monthLabel" style="font-size: 18px; text-transform: capitalize;"></b>
+                <b id="monthLabel" style="font-size: 18px;"></b>
                 <button class="btn-sec" onclick="changeMonth(1)">▶</button>
             </div>
-
             <div class="cal-grid" id="admCalendar"></div>
             <div class="hours-grid" id="admHoursList"></div>
-
-            <button id="btnShare" class="btn-main hidden" onclick="shareAgenda()" style="background: #f1c40f; color: #000; margin-top: 25px;">🔗 COPY CLIENT LINK</button>
+            <button id="btnShare" class="btn-main hidden" onclick="shareAgenda()" style="background:#f1c40f; color:#000;">🔗 COPY GITHUB LINK</button>
         </div>
     </div>
 </div>
 
 <div id="modalBooking" class="modal hidden">
     <div class="modal-content">
-        <h2 style="margin:0; color: var(--pink);">Book Service</h2>
-        <p id="modalTimeLabel" style="font-weight:600; margin: 15px 0; font-size: 18px;"></p>
-        <input type="text" id="clientName" placeholder="Your Name">
-        <textarea id="clientObservation" placeholder="Service details..." style="height: 100px;"></textarea>
-        <button class="btn-main btn-pink" onclick="confirmAndSend()">SEND TO WHATSAPP</button>
+        <h3 style="margin:0; color:var(--pink); text-align:center;">Confirm Booking</h3>
+        <p id="modalTimeLabel" style="text-align:center; font-weight:600; margin:10px 0;"></p>
+        
+        <div class="modal-grid-2">
+            <input type="text" id="clientName" placeholder="Full Name">
+            <input type="text" id="clientObs" placeholder="Observations">
+        </div>
+
+        <select id="serviceSelect"></select>
+        
+        <button class="btn-main btn-pink" onclick="confirmBooking()">CONFIRM & SEND WHATSAPP</button>
         <button class="btn-sec" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
     </div>
 </div>
@@ -140,22 +146,13 @@ const firebaseConfig = { apiKey: "AIzaSyDZcwSrA4dmQY-XKVXQi_jXyz01aZhCr1Q", auth
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let agendaMaster = {}, activeDay = null, tempHour = null, myPhone = "", companyName = "", loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
+let agendaMaster = {}, activeDay = null, tempHour = null, myPhone = "", services = [], loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
 let curMonth = new Date().getMonth(), curYear = new Date().getFullYear();
 
 function showScreen(id) {
     document.querySelectorAll('.card-inner').forEach(el => el.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
     if(id === 'agendaCore' && !isClientMode) document.getElementById('btnShare').classList.remove('hidden');
-}
-
-// Checkout via WhatsApp
-function placeOrder() {
-    const e = document.getElementById('regEmail').value;
-    const p = document.getElementById('regPass').value;
-    if(!e || !p) return alert("Please fill in both fields.");
-    const msg = `New Order: MKBAgenda Premium\nEmail: ${e}\nPassword: ${p}\nAmount: R$ 500,00`;
-    window.open(`https://wa.me/5521991455681?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function handleImage(input) {
@@ -170,7 +167,7 @@ async function login() {
     const e = document.getElementById('email').value.trim().toLowerCase(), p = document.getElementById('pass').value;
     const USERS = { "netosolucoes12@gmail.com": "jworg445566", "sarajanemkb@gmail.com": "jworg445566" };
     if(USERS[e] === p) { loggedUser = e.replace(/\./g, '_'); localStorage.setItem('mkb_user', e); await checkToken(loggedUser); showScreen('admSection'); } 
-    else alert("Login failed.");
+    else alert("Invalid login.");
 }
 
 async function checkToken(uid) {
@@ -182,32 +179,66 @@ async function checkToken(uid) {
 
 function loadData(uid) {
     db.ref('users/'+uid).on('value', s => {
-        const d = s.val() || {}; agendaMaster = d.agenda || {}; myPhone = d.phone || ""; companyName = d.companyName || "Agenda";
+        const d = s.val() || {}; 
+        agendaMaster = d.agenda || {}; 
+        myPhone = d.phone || ""; 
+        services = d.services || ["Standard Service"];
         base64Image = d.profilePhoto || "";
+        
         document.getElementById('displayPhoto').src = base64Image || "https://via.placeholder.com/400";
         document.getElementById('displayBio').innerText = d.profileBio || "";
-        document.getElementById('empresaTitle').innerText = companyName;
-        document.getElementById('tokenDisplay').innerText = "ID: " + (userToken || "");
+        document.getElementById('empresaTitle').innerText = d.companyName || "Agenda";
+        document.getElementById('tokenDisplay').innerText = "ID: " + userToken;
+
         if(!isClientMode) {
-            document.getElementById('companyNameInput').value = companyName;
+            document.getElementById('companyNameInput').value = d.companyName || "";
             document.getElementById('myPhone').value = myPhone;
             document.getElementById('bioInput').value = d.profileBio || "";
             if(base64Image) document.getElementById('imgPreview').src = base64Image;
+            renderServicesEditor();
         }
         updateUI();
     });
 }
 
-function salvarConfig() {
-    companyName = document.getElementById('companyNameInput').value;
-    myPhone = document.getElementById('myPhone').value;
+// Services Management
+function renderServicesEditor() {
+    const list = document.getElementById('servicesList');
+    list.innerHTML = "";
+    services.forEach((s, idx) => {
+        const div = document.createElement('div');
+        div.style = "display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; margin-top:5px; border:1px solid var(--border);";
+        div.innerHTML = `<span>${s}</span><button onclick="removeService(${idx})" style="color:red; background:none; border:none; cursor:pointer;">✖</button>`;
+        list.appendChild(div);
+    });
+}
+
+function addService() {
+    const val = document.getElementById('newServiceInput').value.trim();
+    if(val) { services.push(val); document.getElementById('newServiceInput').value = ""; renderServicesEditor(); }
+}
+
+function removeService(idx) { services.splice(idx, 1); renderServicesEditor(); }
+
+function saveConfig() {
     if(loggedUser) {
-        db.ref('users/'+loggedUser).update({ companyName, phone: myPhone, profileBio: document.getElementById('bioInput').value, profilePhoto: base64Image })
-        .then(() => alert("Saved!"));
+        db.ref('users/'+loggedUser).update({ 
+            companyName: document.getElementById('companyNameInput').value, 
+            phone: document.getElementById('myPhone').value, 
+            profileBio: document.getElementById('bioInput').value, 
+            profilePhoto: base64Image,
+            services: services 
+        }).then(() => alert("Saved Successfully!"));
     }
 }
 
-function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
+function isTimeExpired(day, time) {
+    const [d, m, y] = day.split('-').map(Number);
+    const [h, min] = time.split(':').map(Number);
+    const targetDate = new Date(y, m - 1, d, h, min);
+    const brTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    return brTime > targetDate;
+}
 
 function renderCalendar() {
     const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
@@ -218,55 +249,42 @@ function renderCalendar() {
     for(let d=1; d<=days; d++) {
         const k = `${d}-${curMonth+1}-${curYear}`;
         const div = document.createElement('div');
-        div.className = `day ${agendaMaster['Equipe']?.[k] ? 'has-hours' : ''} ${activeDay === k ? 'selected' : ''}`;
+        div.className = `day ${activeDay === k ? 'selected' : ''}`;
         div.innerText = d; div.onclick = () => { activeDay = k; updateUI(); }; grid.appendChild(div);
     }
 }
 
-// Brasília Auto-Expire Logic
-function isTimeExpired(day, time) {
-    const [d, m, y] = day.split('-').map(Number);
-    const [h, min] = time.split(':').map(Number);
-    const targetDate = new Date(y, m - 1, d, h, min);
-    const now = new Date();
-    const brTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-    return brTime > targetDate;
-}
-
-// Expanded Hours: 05:00 to 23:30
 function renderHours() {
     const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
-    const dayData = agendaMaster['Equipe']?.[activeDay] || {};
+    const dayData = agendaMaster['Master']?.[activeDay] || {};
     const baseHours = [];
     for(let i=5; i<=23; i++) {
-        const hh = i < 10 ? '0'+i : i;
-        baseHours.push(`${hh}:00`);
-        if(i < 23) baseHours.push(`${hh}:30`);
-        else baseHours.push(`23:30`);
+        let hh = i < 10 ? '0'+i : i;
+        baseHours.push(`${hh}:00`, `${hh}:30`);
     }
 
     baseHours.forEach(h => {
         const info = dayData[h];
         const expired = isTimeExpired(activeDay, h);
-        if(isClientMode && (!info || expired)) return;
+        if(isClientMode && expired) return;
 
         const p = document.createElement('div');
-        p.className = `h-pill ${info ? 'active' : ''} ${info?.cliente ? 'booked' : ''} ${expired ? 'expired' : ''}`;
+        p.className = `h-pill ${info ? 'active' : ''} ${expired ? 'expired' : ''}`;
         p.innerHTML = `<b>${h}</b>`;
-        
         p.onclick = () => {
-            if(expired) return;
             tempHour = h;
             if(isClientMode) {
-                if(info && !info.cliente) {
+                if(info) {
+                    const sel = document.getElementById('serviceSelect');
+                    sel.innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
                     document.getElementById('modalTimeLabel').innerText = `${activeDay} at ${h}`;
                     document.getElementById('modalBooking').classList.remove('hidden');
                 }
             } else {
-                if(!agendaMaster['Equipe']) agendaMaster['Equipe'] = {};
-                if(!agendaMaster['Equipe'][activeDay]) agendaMaster['Equipe'][activeDay] = {};
-                if(info) delete agendaMaster['Equipe'][activeDay][h];
-                else agendaMaster['Equipe'][activeDay][h] = {s:"OK"};
+                if(!agendaMaster['Master']) agendaMaster['Master'] = {};
+                if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
+                if(info) delete agendaMaster['Master'][activeDay][h];
+                else agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
                 db.ref('users/'+loggedUser).update({agenda: agendaMaster});
             }
         };
@@ -274,25 +292,23 @@ function renderHours() {
     });
 }
 
-function confirmAndSend() {
-    const n = document.getElementById('clientName').value.trim();
-    const o = document.getElementById('clientObservation').value.trim();
-    if(!n || !o) return alert("Fill all fields.");
-    const txt = `Service: ${o}\nName: ${n}\nDate: ${activeDay} at ${tempHour}.`;
-    window.open(`https://wa.me/${myPhone}?text=${encodeURIComponent(txt)}`, '_blank');
-    agendaMaster['Equipe'][activeDay][tempHour] = { s: "OK", cliente: n, servico: o };
-    db.ref('users/'+loggedUser).update({agenda: agendaMaster}); closeModals();
+function confirmBooking() {
+    const name = document.getElementById('clientName').value.trim();
+    const obs = document.getElementById('clientObs').value.trim();
+    const svc = document.getElementById('serviceSelect').value;
+    if(!name) return alert("Please enter your name");
+    
+    const msg = `Booking Confirmation:\nService: ${svc}\nName: ${name}\nDate: ${activeDay} at ${tempHour}\nNotes: ${obs}`;
+    window.open(`https://wa.me/${myPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    closeModals();
 }
 
-// GitHub Link Sharing
-function shareAgenda() { 
-    const githubLink = `https://mkb-agenda.github.io/?id=${userToken}`;
-    navigator.clipboard.writeText(githubLink).then(() => alert("Link copied: " + githubLink));
-}
-
+function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
 function logout() { localStorage.clear(); location.reload(); }
 function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
 function changeMonth(v) { curMonth += v; if(curMonth>11){curMonth=0;curYear++} if(curMonth<0){curMonth=11;curYear--} renderCalendar(); }
+function shareAgenda() { const link = `https://mkb-agenda.github.io/?id=${userToken}`; navigator.clipboard.writeText(link).then(() => alert("Client link copied!")); }
+function placeOrder() { window.open(`https://wa.me/5521991455681?text=Order MKBAgenda License`, '_blank'); }
 
 window.onload = async () => {
     const id = new URLSearchParams(window.location.search).get('id');
