@@ -259,17 +259,31 @@ function renderCalendar() {
     }
 }
 
+// LÓGICA DE HORÁRIOS ATUALIZADA
 function renderHours() {
     const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
     const dayData = agendaMaster['Master']?.[activeDay] || {};
+    
     for(let i=8; i<=20; i++) {
         const h = `${i < 10 ? '0'+i : i}:00`;
         const info = dayData[h];
-        if(isClientMode && info?.cliente) continue;
+        
+        // NOVO: Se estiver no modo cliente e o horário NÃO foi ativado no ADM, pula (não mostra)
+        if(isClientMode && (!info || info.s !== "OPEN")) {
+            // Se já tiver um cliente marcado, também não mostra para outros clientes
+            if(info?.cliente) continue; 
+            // Se não existe info nenhuma, pula
+            if(!info) continue;
+        }
+
         const p = document.createElement('div');
         p.className = `h-pill ${info ? (info.cliente ? 'booked' : 'active') : ''}`;
         let content = `<b>${h}</b>`;
-        if(!isClientMode && info?.cliente) content += `<div style="font-size:12px">👤 ${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
+        
+        if(!isClientMode && info?.cliente) {
+            content += `<div style="font-size:12px">👤 ${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
+        }
+        
         p.innerHTML = content;
         p.onclick = (e) => {
             if(e.target.tagName === 'BUTTON') return;
@@ -296,7 +310,7 @@ function confirmBooking() {
     const o = document.getElementById('clientObs').value;
     const s = document.getElementById('serviceSelect').value;
     if(!n) return alert("Nome obrigatório");
-    agendaMaster['Master'][activeDay][tempHour] = { cliente: n, obs: o, servico: s };
+    agendaMaster['Master'][activeDay][tempHour] = { cliente: n, obs: o, servico: s, s: "BOOKED" };
     db.ref('users/'+loggedUser).update({agenda: agendaMaster}).then(() => {
         window.open(`https://wa.me/${myPhone}?text=Agendamento: ${s} para ${n} em ${activeDay} as ${tempHour}`);
         closeModals();
@@ -308,7 +322,6 @@ function logout() { localStorage.clear(); location.reload(); }
 function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
 function changeMonth(v) { curMonth += v; renderCalendar(); }
 
-// FUNÇÃO ATUALIZADA: Detecta a URL atual e gera o link dinâmico
 function shareAgenda() { 
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?id=${userToken}`;
