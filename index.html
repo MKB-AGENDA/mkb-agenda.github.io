@@ -30,18 +30,16 @@
 
         .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
 
-        /* Hours Grid */
         .hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
         .h-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; text-align: center; padding: 15px 5px; cursor: pointer; font-weight: 600; font-size: 15px; }
         .h-pill.active { border: 2px solid var(--pink) !important; color: var(--pink); }
         .h-pill.expired { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
-        /* Calendar */
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
-        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; }
-        .day.selected { background: var(--pink) !important; color: #fff; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+        .day.selected { background: var(--pink) !important; color: #fff; border-color: var(--pink); }
+        .day.has-hours { border: 2px solid var(--pink); color: var(--pink); font-weight: bold; }
 
-        /* Inputs */
         input, textarea, select { width: 100%; padding: 16px; margin-top: 12px; background: #000; color: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
         .btn-main { width: 100%; padding: 18px; border-radius: 16px; border:none; font-weight: 700; cursor: pointer; margin-top: 12px; font-size: 16px; }
         .btn-pink { background: var(--pink); color: #fff; }
@@ -50,7 +48,6 @@
 
         .hidden { display: none !important; }
         
-        /* Modal Booking Customization */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .modal-content { background: #1a1a1a; padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 480px; }
         .modal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -102,7 +99,7 @@
             <h4 style="margin: 20px 0 10px;">Manage Services</h4>
             <div id="servicesList"></div>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <input type="text" id="newServiceInput" placeholder="Service Name (e.g. Haircut)" style="margin:0;">
+                <input type="text" id="newServiceInput" placeholder="Service Name" style="margin:0;">
                 <button class="btn-sec" onclick="addService()" style="background:var(--blue);">Add</button>
             </div>
 
@@ -128,15 +125,12 @@
     <div class="modal-content">
         <h3 style="margin:0; color:var(--pink); text-align:center;">Confirm Booking</h3>
         <p id="modalTimeLabel" style="text-align:center; font-weight:600; margin:10px 0;"></p>
-        
         <div class="modal-grid-2">
             <input type="text" id="clientName" placeholder="Full Name">
             <input type="text" id="clientObs" placeholder="Observations">
         </div>
-
         <select id="serviceSelect"></select>
-        
-        <button class="btn-main btn-pink" onclick="confirmBooking()">CONFIRM & SEND WHATSAPP</button>
+        <button class="btn-main btn-pink" onclick="confirmBooking()">CONFIRM & SEND</button>
         <button class="btn-sec" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
     </div>
 </div>
@@ -184,12 +178,10 @@ function loadData(uid) {
         myPhone = d.phone || ""; 
         services = d.services || ["Standard Service"];
         base64Image = d.profilePhoto || "";
-        
         document.getElementById('displayPhoto').src = base64Image || "https://via.placeholder.com/400";
         document.getElementById('displayBio').innerText = d.profileBio || "";
         document.getElementById('empresaTitle').innerText = d.companyName || "Agenda";
         document.getElementById('tokenDisplay').innerText = "ID: " + userToken;
-
         if(!isClientMode) {
             document.getElementById('companyNameInput').value = d.companyName || "";
             document.getElementById('myPhone').value = myPhone;
@@ -201,10 +193,8 @@ function loadData(uid) {
     });
 }
 
-// Services Management
 function renderServicesEditor() {
-    const list = document.getElementById('servicesList');
-    list.innerHTML = "";
+    const list = document.getElementById('servicesList'); list.innerHTML = "";
     services.forEach((s, idx) => {
         const div = document.createElement('div');
         div.style = "display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; margin-top:5px; border:1px solid var(--border);";
@@ -213,22 +203,15 @@ function renderServicesEditor() {
     });
 }
 
-function addService() {
-    const val = document.getElementById('newServiceInput').value.trim();
-    if(val) { services.push(val); document.getElementById('newServiceInput').value = ""; renderServicesEditor(); }
-}
-
+function addService() { const val = document.getElementById('newServiceInput').value.trim(); if(val) { services.push(val); document.getElementById('newServiceInput').value = ""; renderServicesEditor(); } }
 function removeService(idx) { services.splice(idx, 1); renderServicesEditor(); }
 
 function saveConfig() {
     if(loggedUser) {
         db.ref('users/'+loggedUser).update({ 
-            companyName: document.getElementById('companyNameInput').value, 
-            phone: document.getElementById('myPhone').value, 
-            profileBio: document.getElementById('bioInput').value, 
-            profilePhoto: base64Image,
-            services: services 
-        }).then(() => alert("Saved Successfully!"));
+            companyName: document.getElementById('companyNameInput').value, phone: document.getElementById('myPhone').value, 
+            profileBio: document.getElementById('bioInput').value, profilePhoto: base64Image, services: services 
+        }).then(() => alert("Saved!"));
     }
 }
 
@@ -240,6 +223,7 @@ function isTimeExpired(day, time) {
     return brTime > targetDate;
 }
 
+// CORREÇÃO: Função de renderização agora destaca corretamente os dias salvos
 function renderCalendar() {
     const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
     document.getElementById('monthLabel').innerText = `${new Intl.DateTimeFormat('en-US', {month:'long'}).format(new Date(curYear, curMonth))} / ${curYear}`;
@@ -248,8 +232,9 @@ function renderCalendar() {
     for(let i=0; i<start; i++) grid.innerHTML += `<div></div>`;
     for(let d=1; d<=days; d++) {
         const k = `${d}-${curMonth+1}-${curYear}`;
+        const hasHours = agendaMaster['Master']?.[k] && Object.keys(agendaMaster['Master'][k]).length > 0;
         const div = document.createElement('div');
-        div.className = `day ${activeDay === k ? 'selected' : ''}`;
+        div.className = `day ${activeDay === k ? 'selected' : ''} ${hasHours ? 'has-hours' : ''}`;
         div.innerText = d; div.onclick = () => { activeDay = k; updateUI(); }; grid.appendChild(div);
     }
 }
@@ -258,15 +243,12 @@ function renderHours() {
     const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
     const dayData = agendaMaster['Master']?.[activeDay] || {};
     const baseHours = [];
-    for(let i=5; i<=23; i++) {
-        let hh = i < 10 ? '0'+i : i;
-        baseHours.push(`${hh}:00`, `${hh}:30`);
-    }
+    for(let i=5; i<=23; i++) { let hh = i < 10 ? '0'+i : i; baseHours.push(`${hh}:00`, `${hh}:30`); }
 
     baseHours.forEach(h => {
         const info = dayData[h];
         const expired = isTimeExpired(activeDay, h);
-        if(isClientMode && expired) return;
+        if(isClientMode && (!info || expired)) return;
 
         const p = document.createElement('div');
         p.className = `h-pill ${info ? 'active' : ''} ${expired ? 'expired' : ''}`;
@@ -274,12 +256,9 @@ function renderHours() {
         p.onclick = () => {
             tempHour = h;
             if(isClientMode) {
-                if(info) {
-                    const sel = document.getElementById('serviceSelect');
-                    sel.innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
-                    document.getElementById('modalTimeLabel').innerText = `${activeDay} at ${h}`;
-                    document.getElementById('modalBooking').classList.remove('hidden');
-                }
+                document.getElementById('serviceSelect').innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
+                document.getElementById('modalTimeLabel').innerText = `${activeDay} at ${h}`;
+                document.getElementById('modalBooking').classList.remove('hidden');
             } else {
                 if(!agendaMaster['Master']) agendaMaster['Master'] = {};
                 if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
@@ -296,9 +275,8 @@ function confirmBooking() {
     const name = document.getElementById('clientName').value.trim();
     const obs = document.getElementById('clientObs').value.trim();
     const svc = document.getElementById('serviceSelect').value;
-    if(!name) return alert("Please enter your name");
-    
-    const msg = `Booking Confirmation:\nService: ${svc}\nName: ${name}\nDate: ${activeDay} at ${tempHour}\nNotes: ${obs}`;
+    if(!name) return alert("Enter name");
+    const msg = `Booking:\nService: ${svc}\nName: ${name}\nDate: ${activeDay} at ${tempHour}\nNotes: ${obs}`;
     window.open(`https://wa.me/${myPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     closeModals();
 }
@@ -307,7 +285,7 @@ function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
 function logout() { localStorage.clear(); location.reload(); }
 function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
 function changeMonth(v) { curMonth += v; if(curMonth>11){curMonth=0;curYear++} if(curMonth<0){curMonth=11;curYear--} renderCalendar(); }
-function shareAgenda() { const link = `https://mkb-agenda.github.io/?id=${userToken}`; navigator.clipboard.writeText(link).then(() => alert("Client link copied!")); }
+function shareAgenda() { const link = `https://mkb-agenda.github.io/?id=${userToken}`; navigator.clipboard.writeText(link).then(() => alert("Link Copied!")); }
 function placeOrder() { window.open(`https://wa.me/5521991455681?text=Order MKBAgenda License`, '_blank'); }
 
 window.onload = async () => {
