@@ -29,11 +29,15 @@
 
         .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
 
+        /* Photo Editor UI */
+        #photoEditor { display: none; position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 20px; background: #000; margin-bottom: 10px; }
+        #imageToCrop { position: absolute; cursor: move; transform-origin: center; }
+        .editor-controls { display: flex; gap: 5px; margin-bottom: 15px; }
+
         .hours-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 450px; overflow-y: auto; padding-right: 5px; }
         .h-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .h-pill.active { border: 2px solid var(--pink); }
         .h-pill.booked { border: 2px solid var(--green); background: rgba(46, 204, 113, 0.1); }
-        .h-pill.expired { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
         .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; }
@@ -68,6 +72,16 @@
             <input type="email" id="email" placeholder="Email">
             <input type="password" id="pass" placeholder="Password">
             <button class="btn-main btn-pink" onclick="login()">Login</button>
+            <p style="text-align:center; font-size:14px; margin-top:15px; color:#888;">No account? <a href="javascript:void(0)" onclick="showScreen('profRegister')" style="color:var(--pink)">Create Account</a></p>
+        </div>
+
+        <div id="profRegister" class="hidden card-inner">
+            <h3 style="text-align:center">Create Account</h3>
+            <input type="email" id="regEmail" placeholder="New Email">
+            <input type="password" id="regPass" placeholder="New Password">
+            <div style="background:rgba(255,64,181,0.1); padding:15px; border-radius:12px; margin-top:15px; text-align:center; color:var(--pink);">License Required: R$ 500,00</div>
+            <button class="btn-main btn-green" onclick="placeOrder()">REQUEST ACCESS & PAY</button>
+            <button class="btn-sec" onclick="showScreen('profLogin')" style="width:100%; margin-top:10px;">Back to Login</button>
         </div>
 
         <div id="admSection" class="hidden card-inner">
@@ -75,10 +89,23 @@
                 <button class="btn-sec" onclick="logout()">Logout</button>
                 <b id="tokenDisplay" style="color:var(--pink)"></b>
             </div>
+
             <div style="text-align:center; margin-bottom: 20px;">
+                <div id="photoEditor">
+                    <img id="imageToCrop" src="">
+                </div>
+                <div id="editorTools" class="hidden">
+                    <div class="editor-controls">
+                        <button class="btn-sec" onclick="adjustZoom(0.1)">Zoom +</button>
+                        <button class="btn-sec" onclick="adjustZoom(-0.1)">Zoom -</button>
+                        <button class="btn-main btn-pink" onclick="confirmCrop()" style="margin:0; padding:10px;">Confirm Crop</button>
+                    </div>
+                </div>
                 <img id="imgPreview" src="https://via.placeholder.com/150" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--pink); cursor:pointer;" onclick="document.getElementById('fileInput').click()">
-                <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImage(this)">
+                <p style="font-size:12px; color:#888; margin-top:5px;">Click photo to change</p>
+                <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="initPhotoEditor(this)">
             </div>
+
             <input type="text" id="companyNameInput" placeholder="Business Name">
             <input type="number" id="myPhone" placeholder="WhatsApp (5521...)">
             <textarea id="bioInput" placeholder="Bio description..."></textarea>
@@ -127,11 +154,63 @@ const db = firebase.database();
 
 let agendaMaster = {}, activeDay = null, tempHour = null, myPhone = "", services = [], loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
 let curMonth = new Date().getMonth(), curYear = new Date().getFullYear();
+let currentZoom = 1, imgPosX = 0, imgPosY = 0;
 
 function showScreen(id) {
-    document.querySelectorAll('.card-inner').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.card-inner, #profRegister').forEach(el => el.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
     if(id === 'agendaCore' && !isClientMode) document.getElementById('btnShare').classList.remove('hidden');
+}
+
+// PHOTO EDITOR LOGIC
+function initPhotoEditor(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.getElementById('imageToCrop');
+            img.src = e.target.result;
+            document.getElementById('photoEditor').style.display = 'block';
+            document.getElementById('editorTools').classList.remove('hidden');
+            document.getElementById('imgPreview').classList.add('hidden');
+            currentZoom = 1; imgPosX = 0; imgPosY = 0;
+            applyImgTransform();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function adjustZoom(val) { currentZoom += val; applyImgTransform(); }
+
+function applyImgTransform() {
+    const img = document.getElementById('imageToCrop');
+    img.style.transform = `translate(${imgPosX}px, ${imgPosY}px) scale(${currentZoom})`;
+}
+
+// Arrastar foto
+let isDragging = false, startX, startY;
+const editor = document.getElementById('photoEditor');
+editor.onmousedown = (e) => { isDragging = true; startX = e.clientX - imgPosX; startY = e.clientY - imgPosY; };
+window.onmousemove = (e) => { if(isDragging) { imgPosX = e.clientX - startX; imgPosY = e.clientY - startY; applyImgTransform(); } };
+window.onmouseup = () => isDragging = false;
+
+function confirmCrop() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 400; canvas.height = 400;
+    const img = document.getElementById('imageToCrop');
+    
+    // Desenha o que está visível no quadrado do editor para o canvas
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,0,400,400);
+    
+    // Lógica simplificada de crop baseada no preview
+    ctx.drawImage(img, imgPosX, imgPosY, img.naturalWidth * currentZoom, img.naturalHeight * currentZoom);
+    
+    base64Image = canvas.toDataURL('image/jpeg', 0.8);
+    document.getElementById('imgPreview').src = base64Image;
+    document.getElementById('imgPreview').classList.remove('hidden');
+    document.getElementById('photoEditor').style.display = 'none';
+    document.getElementById('editorTools').classList.add('hidden');
 }
 
 async function login() {
@@ -159,6 +238,7 @@ function loadData(uid) {
             document.getElementById('companyNameInput').value = d.companyName || "";
             document.getElementById('myPhone').value = myPhone;
             document.getElementById('bioInput').value = d.profileBio || "";
+            if(base64Image) document.getElementById('imgPreview').src = base64Image;
             renderServicesEditor();
         }
         updateUI();
@@ -201,15 +281,10 @@ function renderHours() {
         const h = `${i < 10 ? '0'+i : i}:00`;
         const info = dayData[h];
         if(isClientMode && info?.cliente) continue;
-
         const p = document.createElement('div');
         p.className = `h-pill ${info ? (info.cliente ? 'booked' : 'active') : ''}`;
-        
         let content = `<b>${h}</b>`;
-        if(!isClientMode && info?.cliente) {
-            content += `<div style="font-size:12px; text-align:right;">👤 ${info.cliente}<br><button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
-        }
-        
+        if(!isClientMode && info?.cliente) content += `<div style="font-size:12px">👤 ${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
         p.innerHTML = content;
         p.onclick = (e) => {
             if(e.target.tagName === 'BUTTON') return;
@@ -217,19 +292,13 @@ function renderHours() {
             if(isClientMode) {
                 if(info && !info.cliente) {
                     document.getElementById('serviceSelect').innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
-                    document.getElementById('modalTimeLabel').innerText = `${activeDay} às ${h}`;
                     document.getElementById('modalBooking').classList.remove('hidden');
                 }
             } else {
                 if(!agendaMaster['Master']) agendaMaster['Master'] = {};
                 if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
-                if(info) {
-                    if(!info.cliente || confirm("Este horário tem um agendamento. Deseja remover as configurações de abertura deste horário?")) {
-                        delete agendaMaster['Master'][activeDay][h];
-                    }
-                } else {
-                    agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
-                }
+                if(info) delete agendaMaster['Master'][activeDay][h];
+                else agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
                 db.ref('users/'+loggedUser).update({agenda: agendaMaster});
             }
         };
@@ -242,26 +311,18 @@ function confirmBooking() {
     const o = document.getElementById('clientObs').value;
     const s = document.getElementById('serviceSelect').value;
     if(!n) return alert("Nome obrigatório");
-    
     agendaMaster['Master'][activeDay][tempHour] = { cliente: n, obs: o, servico: s };
     db.ref('users/'+loggedUser).update({agenda: agendaMaster}).then(() => {
-        window.open(`https://wa.me/${myPhone}?text=Agendamento: ${s} para ${n} em ${activeDay} às ${tempHour}`);
+        window.open(`https://wa.me/${myPhone}?text=Agendamento: ${s} para ${n} em ${activeDay} as ${tempHour}`);
         closeModals();
     });
 }
 
 function cancelBooking(h) {
-    if(confirm("Deseja desmarcar este cliente e liberar o horário?")) {
-        // Remove apenas os dados do cliente, mantendo o horário aberto (OPEN)
+    if(confirm("Deseja desmarcar?")) {
         agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
         db.ref('users/'+loggedUser).update({agenda: agendaMaster});
     }
-}
-
-function handleImage(input) {
-    const reader = new FileReader();
-    reader.onload = e => { base64Image = e.target.result; document.getElementById('imgPreview').src = base64Image; };
-    reader.readAsDataURL(input.files[0]);
 }
 
 function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
@@ -269,6 +330,7 @@ function logout() { localStorage.clear(); location.reload(); }
 function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
 function changeMonth(v) { curMonth += v; renderCalendar(); }
 function shareAgenda() { navigator.clipboard.writeText(`https://mkb-agenda.github.io/?id=${userToken}`).then(() => alert("Link copiado!")); }
+function placeOrder() { window.open(`https://wa.me/5521991455681?text=Quero adquirir minha licença MKBAgenda`, '_blank'); }
 
 window.onload = async () => {
     const id = new URLSearchParams(window.location.search).get('id');
