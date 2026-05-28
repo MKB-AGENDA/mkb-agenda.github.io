@@ -57,7 +57,6 @@
         .btn-edit-hour { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 16px; padding: 5px; margin-left: 10px; }
         .btn-edit-hour:hover { color: var(--pink); }
 
-        /* Estilos dos tipos de gerenciamento */
         .mgmt-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
         .mgmt-tab { flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; text-align: center; font-size: 14px; }
         .mgmt-tab.active { background: var(--pink); border-color: var(--pink); }
@@ -91,8 +90,7 @@
             <h3 style="text-align:center">Create Account</h3>
             <input type="email" id="regEmail" placeholder="New Email">
             <input type="password" id="regPass" placeholder="New Password">
-            <div style="background:rgba(255,64,181,0.1); padding:15px; border-radius:12px; margin-top:15px; text-align:center; color:var(--pink);">License Required: R$ 500,00</div>
-            <button class="btn-main btn-green" onclick="placeOrder()">REQUEST ACCESS & PAY</button>
+            <button class="btn-main btn-green" onclick="placeOrder()">REQUEST ACCESS</button>
             <button class="btn-sec" onclick="showScreen('profLogin')" style="width:100%; margin-top:10px;">Back to Login</button>
         </div>
 
@@ -204,7 +202,6 @@ function showScreen(id) {
     }
 }
 
-// Alternar entre gerenciamento manual e automático
 function switchMgmtMode(mode) {
     currentMgmtMode = mode;
     document.getElementById('tabManual').classList.toggle('active', mode === 'manual');
@@ -259,9 +256,7 @@ function applyAutomaticSchedule() {
             const h = `${i < 10 ? '0'+i : i}:${m === 0 ? '00' : m}`;
             const currentMin = (i * 60) + m;
 
-            // Verifica se está dentro do range principal de trabalho
             if(currentMin >= startMin && currentMin <= endMin) {
-                // Verifica se cai em alguma exceção cadastrada
                 let isException = false;
                 for(let exc of currentExceptions) {
                     if(currentMin >= convertMin(exc.start) && currentMin <= convertMin(exc.end)) {
@@ -271,12 +266,10 @@ function applyAutomaticSchedule() {
                 }
                 
                 if(!isException) {
-                    // Mantém se já tiver cliente agendado, se não, abre o horário
                     if(!agendaMaster['Master'][activeDay][h] || !agendaMaster['Master'][activeDay][h].cliente) {
                         agendaMaster['Master'][activeDay][h] = { s: "OPEN" };
                     }
                 } else {
-                    // Se cair na exceção e não tiver cliente marcado, remove a disponibilidade
                     if(agendaMaster['Master'][activeDay][h] && !agendaMaster['Master'][activeDay][h].cliente) {
                         delete agendaMaster['Master'][activeDay][h];
                     }
@@ -291,7 +284,6 @@ function applyAutomaticSchedule() {
     });
 }
 
-// Editor de Foto
 function initPhotoEditor(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -434,7 +426,6 @@ function renderHours() {
             const info = dayData[h];
             const labelExibido = customLabels[h] || h;
 
-            // ALTERADO: Se tiver cliente agendado (info?.cliente), NÃO aplica o filtro de tempo real! Fica fixo.
             if (isClientMode && ehHoje && (!info || !info.cliente)) {
                 const [horaH, minH] = h.split(':').map(Number);
                 const horaLimite = new Date();
@@ -443,7 +434,7 @@ function renderHours() {
             }
             
             if(isClientMode && (!info || info.s !== "OPEN")) {
-                if(info?.cliente) { /* Se tiver cliente, deixa passar para renderizar fixo */ } 
+                if(info?.cliente) { } 
                 else if(!info) continue;
             }
 
@@ -459,7 +450,6 @@ function renderHours() {
                     content += `<button class="btn-edit-hour" onclick="event.stopPropagation(); editHourLabel('${h}')">✏️</button>`;
                 }
             } else if(info?.cliente) {
-                // Texto estático de ocupado para outros clientes visualizarem sem botões de ação
                 content += `<div style="font-size:12px; color: var(--green);">Ocupado</div>`;
             }
             
@@ -498,7 +488,6 @@ function confirmBooking() {
     });
 }
 
-// ALTERADO: Validação com caixa de confirmação em inglês
 function cancelBooking(h) { 
     if(confirm("Do you really want to delete this schedule?")) { 
         agendaMaster['Master'][activeDay][h] = {s:"OPEN"}; 
