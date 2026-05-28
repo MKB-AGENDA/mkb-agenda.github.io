@@ -42,6 +42,7 @@
         .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; }
         .day.selected { background: var(--pink) !important; color: #fff; }
         .day.has-hours { border: 2px solid var(--pink); color: var(--pink); font-weight: bold; }
+        .day.disabled { opacity: 0.2; pointer-events: none; background: transparent; }
 
         input, textarea, select { width: 100%; padding: 16px; margin-top: 12px; background: #000; color: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
         .btn-main { width: 100%; padding: 18px; border-radius: 16px; border:none; font-weight: 700; cursor: pointer; margin-top: 12px; font-size: 16px; }
@@ -53,6 +54,18 @@
         .hidden { display: none !important; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .modal-content { background: #1a1a1a; padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 480px; }
+        .btn-edit-hour { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 16px; padding: 5px; margin-left: 10px; }
+        .btn-edit-hour:hover { color: var(--pink); }
+
+        /* Estilos dos tipos de gerenciamento */
+        .mgmt-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+        .mgmt-tab { flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; text-align: center; font-size: 14px; }
+        .mgmt-tab.active { background: var(--pink); border-color: var(--pink); }
+        .auto-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 15px; border-radius: 14px; margin-bottom: 15px; }
+        .time-range-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .time-range-row input { margin-top: 0; text-align: center; }
+        .exception-pill { display: inline-flex; align-items: center; background: rgba(231, 76, 60, 0.2); border: 1px solid var(--red); color: #fff; padding: 5px 10px; border-radius: 8px; font-size: 12px; gap: 5px; margin: 5px 5px 0 0; }
+        .exception-pill span { cursor: pointer; color: var(--red); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -116,13 +129,38 @@
         </div>
 
         <div id="agendaCore" class="hidden card-inner">
-            <button id="btnBackEditor" class="btn-sec" onclick="showScreen('admSection')" style="width:100%; margin-bottom:15px;">⚙️ Editor</button>
+            <button id="btnBackEditor" class="btn-sec hidden" onclick="showScreen('admSection')" style="width:100%; margin-bottom:15px;">⚙️ Editor</button>
             <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px;">
                 <button class="btn-sec" onclick="changeMonth(-1)">◀</button>
                 <b id="monthLabel"></b>
                 <button class="btn-sec" onclick="changeMonth(1)">▶</button>
             </div>
             <div class="cal-grid" id="admCalendar"></div>
+
+            <div id="mgmtTabsContainer" class="mgmt-tabs">
+                <div id="tabManual" class="mgmt-tab active" onclick="switchMgmtMode('manual')">Manual Mode</div>
+                <div id="tabAuto" class="mgmt-tab" onclick="switchMgmtMode('auto')">Automatic Mode</div>
+            </div>
+
+            <div id="panelAuto" class="auto-box hidden">
+                <label style="font-size: 13px; color: #aaa;">Work Schedule Interval:</label>
+                <div class="time-range-row">
+                    <input type="text" id="autoStart" placeholder="10:00" maxlength="5">
+                    <span>—</span>
+                    <input type="text" id="autoEnd" placeholder="19:00" maxlength="5">
+                </div>
+                
+                <label style="font-size: 13px; color: #aaa; margin-top: 15px; display: block;">Add Exception Hours (e.g. Lunch/Break):</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="autoExceptStart" placeholder="12:00" maxlength="5" style="margin-top:5px;">
+                    <input type="text" id="autoExceptEnd" placeholder="13:00" maxlength="5" style="margin-top:5px;">
+                    <button class="btn-sec" onclick="addException()" style="margin-top:5px; padding: 0 15px;">+</button>
+                </div>
+                <div id="exceptionsContainer" style="margin-bottom: 10px;"></div>
+
+                <button class="btn-main btn-green" onclick="applyAutomaticSchedule()" style="padding: 12px; margin-top: 10px; font-size: 14px;">APPLY AUTOMATIC HOURS</button>
+            </div>
+
             <div class="hours-grid" id="admHoursList"></div>
             <button id="btnShare" class="btn-main hidden" onclick="shareAgenda()" style="background:#f1c40f; color:#000;">🔗 COPY LINK</button>
         </div>
@@ -146,14 +184,111 @@ const firebaseConfig = { apiKey: "AIzaSyDZcwSrA4dmQY-XKVXQi_jXyz01aZhCr1Q", auth
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let agendaMaster = {}, activeDay = null, tempHour = null, myPhone = "", services = [], loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
+let agendaMaster = {}, customLabels = {}, activeDay = null, tempHour = null, myPhone = "", services = [], loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
 let curMonth = new Date().getMonth(), curYear = new Date().getFullYear();
 let currentZoom = 1, imgPosX = 0, imgPosY = 0, isDragging = false, startX, startY;
+let currentMgmtMode = 'manual', currentExceptions = [];
 
 function showScreen(id) {
     document.querySelectorAll('.card-inner, #profRegister').forEach(el => el.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
-    if(id === 'agendaCore' && !isClientMode) document.getElementById('btnShare').classList.remove('hidden');
+    if(id === 'agendaCore') {
+        if(!isClientMode) {
+            document.getElementById('btnShare').classList.remove('hidden');
+            document.getElementById('btnBackEditor').classList.remove('hidden');
+            document.getElementById('mgmtTabsContainer').classList.remove('hidden');
+        } else {
+            document.getElementById('mgmtTabsContainer').classList.add('hidden');
+            document.getElementById('panelAuto').classList.add('hidden');
+        }
+    }
+}
+
+// Alternar entre gerenciamento manual e automático
+function switchMgmtMode(mode) {
+    currentMgmtMode = mode;
+    document.getElementById('tabManual').classList.toggle('active', mode === 'manual');
+    document.getElementById('tabAuto').classList.toggle('active', mode === 'auto');
+    document.getElementById('panelAuto').classList.toggle('hidden', mode !== 'auto');
+}
+
+function addException() {
+    const start = document.getElementById('autoExceptStart').value.trim();
+    const end = document.getElementById('autoExceptEnd').value.trim();
+    if(start && end) {
+        currentExceptions.push({ start, end });
+        document.getElementById('autoExceptStart').value = '';
+        document.getElementById('autoExceptEnd').value = '';
+        renderExceptions();
+    }
+}
+
+function removeException(index) {
+    currentExceptions.splice(index, 1);
+    renderExceptions();
+}
+
+function renderExceptions() {
+    const container = document.getElementById('exceptionsContainer');
+    container.innerHTML = '';
+    currentExceptions.forEach((exc, idx) => {
+        container.innerHTML += `<div class="exception-pill">${exc.start} - ${exc.end} <span onclick="removeException(${idx})">✖</span></div>`;
+    });
+}
+
+function applyAutomaticSchedule() {
+    if(!activeDay) return alert("Please select a day on the calendar first!");
+    const startStr = document.getElementById('autoStart').value.trim();
+    const endStr = document.getElementById('autoEnd').value.trim();
+    
+    if(!startStr || !endStr) return alert("Please set start and end work hours!");
+
+    if(!agendaMaster['Master']) agendaMaster['Master'] = {};
+    if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
+
+    const convertMin = (str) => {
+        const [h, m] = str.split(':').map(Number);
+        return (h * 60) + (m || 0);
+    };
+
+    const startMin = convertMin(startStr);
+    const endMin = convertMin(endStr);
+
+    for(let i = 5; i <= 23; i++) {
+        for(let m = 0; m < 60; m += 30) {
+            const h = `${i < 10 ? '0'+i : i}:${m === 0 ? '00' : m}`;
+            const currentMin = (i * 60) + m;
+
+            // Verifica se está dentro do range principal de trabalho
+            if(currentMin >= startMin && currentMin <= endMin) {
+                // Verifica se cai em alguma exceção cadastrada
+                let isException = false;
+                for(let exc of currentExceptions) {
+                    if(currentMin >= convertMin(exc.start) && currentMin <= convertMin(exc.end)) {
+                        isException = true;
+                        break;
+                    }
+                }
+                
+                if(!isException) {
+                    // Mantém se já tiver cliente agendado, se não, abre o horário
+                    if(!agendaMaster['Master'][activeDay][h] || !agendaMaster['Master'][activeDay][h].cliente) {
+                        agendaMaster['Master'][activeDay][h] = { s: "OPEN" };
+                    }
+                } else {
+                    // Se cair na exceção e não tiver cliente marcado, remove a disponibilidade
+                    if(agendaMaster['Master'][activeDay][h] && !agendaMaster['Master'][activeDay][h].cliente) {
+                        delete agendaMaster['Master'][activeDay][h];
+                    }
+                }
+            }
+        }
+    }
+
+    db.ref('users/'+loggedUser).update({agenda: agendaMaster}).then(() => {
+        alert("Automatic hours applied!");
+        updateUI();
+    });
 }
 
 // Editor de Foto
@@ -223,6 +358,7 @@ async function checkToken(uid) {
 function loadData(uid) {
     db.ref('users/'+uid).on('value', s => {
         const d = s.val() || {}; agendaMaster = d.agenda || {}; myPhone = d.phone || ""; services = d.services || [];
+        customLabels = d.customLabels || {};
         base64Image = d.profilePhoto || "";
         document.getElementById('displayPhoto').src = base64Image || "https://via.placeholder.com/400";
         document.getElementById('displayBio').innerText = d.profileBio || "";
@@ -250,58 +386,102 @@ function renderCalendar() {
     const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
     document.getElementById('monthLabel').innerText = `${new Intl.DateTimeFormat('pt-BR', {month:'long'}).format(new Date(curYear, curMonth))} / ${curYear}`;
     const days = new Date(curYear, curMonth+1, 0).getDate();
+    
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
     for(let d=1; d<=days; d++) {
         const k = `${d}-${curMonth+1}-${curYear}`;
+        const dataFoco = new Date(curYear, curMonth, d);
         const has = agendaMaster['Master']?.[k];
+        
         const div = document.createElement('div');
-        div.className = `day ${activeDay === k ? 'selected' : ''} ${has ? 'has-hours' : ''}`;
-        div.innerText = d; div.onclick = () => { activeDay = k; updateUI(); }; grid.appendChild(div);
+        
+        if(isClientMode && dataFoco < hoje) {
+            div.className = "day disabled";
+        } else {
+            div.className = `day ${activeDay === k ? 'selected' : ''} ${has ? 'has-hours' : ''}`;
+            div.onclick = () => { activeDay = k; updateUI(); };
+        }
+        
+        div.innerText = d; 
+        grid.appendChild(div);
     }
 }
 
-// LÓGICA DE HORÁRIOS ATUALIZADA
+function editHourLabel(originalHour) {
+    const atualLabel = customLabels[originalHour] || originalHour;
+    const novoLabel = prompt(`Digite o novo formato para o horário ${originalHour}:`, atualLabel);
+    if (novoLabel !== null && novoLabel.trim() !== "") {
+        customLabels[originalHour] = novoLabel.trim();
+        db.ref('users/'+loggedUser).update({ customLabels: customLabels }).then(() => {
+            updateUI();
+        });
+    }
+}
+
 function renderHours() {
     const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
     const dayData = agendaMaster['Master']?.[activeDay] || {};
     
-    for(let i=8; i<=20; i++) {
-        const h = `${i < 10 ? '0'+i : i}:00`;
-        const info = dayData[h];
-        
-        // NOVO: Se estiver no modo cliente e o horário NÃO foi ativado no ADM, pula (não mostra)
-        if(isClientMode && (!info || info.s !== "OPEN")) {
-            // Se já tiver um cliente marcado, também não mostra para outros clientes
-            if(info?.cliente) continue; 
-            // Se não existe info nenhuma, pula
-            if(!info) continue;
-        }
+    const agora = new Date();
+    const [diaAtivo, mesAtivo, anoAtivo] = activeDay.split('-').map(Number);
+    const ehHoje = agora.getDate() === diaAtivo && (agora.getMonth() + 1) === mesAtivo && agora.getFullYear() === anoAtivo;
 
-        const p = document.createElement('div');
-        p.className = `h-pill ${info ? (info.cliente ? 'booked' : 'active') : ''}`;
-        let content = `<b>${h}</b>`;
-        
-        if(!isClientMode && info?.cliente) {
-            content += `<div style="font-size:12px">👤 ${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
-        }
-        
-        p.innerHTML = content;
-        p.onclick = (e) => {
-            if(e.target.tagName === 'BUTTON') return;
-            tempHour = h;
-            if(isClientMode) {
-                if(info && !info.cliente) {
-                    document.getElementById('serviceSelect').innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
-                    document.getElementById('modalBooking').classList.remove('hidden');
-                }
-            } else {
-                if(!agendaMaster['Master']) agendaMaster['Master'] = {};
-                if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
-                if(info) delete agendaMaster['Master'][activeDay][h];
-                else agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
-                db.ref('users/'+loggedUser).update({agenda: agendaMaster});
+    for(let i = 5; i <= 23; i++) {
+        for(let m = 0; m < 60; m += 30) {
+            const h = `${i < 10 ? '0'+i : i}:${m === 0 ? '00' : m}`;
+            const info = dayData[h];
+            const labelExibido = customLabels[h] || h;
+
+            // ALTERADO: Se tiver cliente agendado (info?.cliente), NÃO aplica o filtro de tempo real! Fica fixo.
+            if (isClientMode && ehHoje && (!info || !info.cliente)) {
+                const [horaH, minH] = h.split(':').map(Number);
+                const horaLimite = new Date();
+                horaLimite.setHours(horaH, minH, 0, 0);
+                if (agora > horaLimite) continue;
             }
-        };
-        grid.appendChild(p);
+            
+            if(isClientMode && (!info || info.s !== "OPEN")) {
+                if(info?.cliente) { /* Se tiver cliente, deixa passar para renderizar fixo */ } 
+                else if(!info) continue;
+            }
+
+            const p = document.createElement('div');
+            p.className = `h-pill ${info ? (info.cliente ? 'booked' : 'active') : ''}`;
+            
+            let content = `<b>${labelExibido}</b>`;
+            
+            if(!isClientMode) {
+                if(info?.cliente) {
+                    content += `<div style="font-size:12px">👤 ${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
+                } else {
+                    content += `<button class="btn-edit-hour" onclick="event.stopPropagation(); editHourLabel('${h}')">✏️</button>`;
+                }
+            } else if(info?.cliente) {
+                // Texto estático de ocupado para outros clientes visualizarem sem botões de ação
+                content += `<div style="font-size:12px; color: var(--green);">Ocupado</div>`;
+            }
+            
+            p.innerHTML = content;
+            p.onclick = (e) => {
+                if(e.target.tagName === 'BUTTON') return;
+                tempHour = h;
+                if(isClientMode) {
+                    if(info && !info.cliente) {
+                        document.getElementById('serviceSelect').innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
+                        document.getElementById('modalBooking').classList.remove('hidden');
+                    }
+                } else {
+                    if(!agendaMaster['Master']) agendaMaster['Master'] = {};
+                    if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
+                    if(info) delete agendaMaster['Master'][activeDay][h];
+                    else agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
+                    db.ref('users/'+loggedUser).update({agenda: agendaMaster});
+                }
+            };
+            grid.appendChild(p);
+        }
     }
 }
 
@@ -312,11 +492,20 @@ function confirmBooking() {
     if(!n) return alert("Nome obrigatório");
     agendaMaster['Master'][activeDay][tempHour] = { cliente: n, obs: o, servico: s, s: "BOOKED" };
     db.ref('users/'+loggedUser).update({agenda: agendaMaster}).then(() => {
-        window.open(`https://wa.me/${myPhone}?text=Agendamento: ${s} para ${n} em ${activeDay} as ${tempHour}`);
+        const labelWhatsapp = customLabels[tempHour] || tempHour;
+        window.open(`https://wa.me/${myPhone}?text=Agendamento: ${s} para ${n} em ${activeDay} as ${labelWhatsapp}`);
         closeModals();
     });
 }
-function cancelBooking(h) { if(confirm("Deseja desmarcar?")) { agendaMaster['Master'][activeDay][h] = {s:"OPEN"}; db.ref('users/'+loggedUser).update({agenda: agendaMaster}); } }
+
+// ALTERADO: Validação com caixa de confirmação em inglês
+function cancelBooking(h) { 
+    if(confirm("Do you really want to delete this schedule?")) { 
+        agendaMaster['Master'][activeDay][h] = {s:"OPEN"}; 
+        db.ref('users/'+loggedUser).update({agenda: agendaMaster}); 
+    } 
+}
+
 function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
 function logout() { localStorage.clear(); location.reload(); }
 function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
