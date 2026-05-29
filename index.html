@@ -29,7 +29,9 @@
 
         .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
 
-        #photoEditor { display: none; position: relative; width: 300px; height: 300px; overflow: hidden; border-radius: 20px; background: #000; margin: 0 auto 15px; border: 2px solid var(--pink); cursor: move; }
+        /* CORREÇÃO MOBILE: pointer-events none por padrão para não bloquear cliques quando escondido */
+        #photoEditor { display: none; position: relative; width: 300px; height: 300px; overflow: hidden; border-radius: 20px; background: #000; margin: 0 auto 15px; border: 2px solid var(--pink); cursor: move; pointer-events: none; }
+        #photoEditor.active { pointer-events: auto; }
         #imageToCrop { position: absolute; top: 50%; left: 50%; transform-origin: center; pointer-events: none; }
         .editor-controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
 
@@ -39,7 +41,7 @@
         .h-pill.booked { border: 2px solid var(--green); background: rgba(46, 204, 113, 0.1); }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
-        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; user-select: none; }
         .day.selected { background: var(--pink) !important; color: #fff; }
         .day.has-hours { border: 2px solid var(--pink); color: var(--pink); font-weight: bold; }
         .day.disabled { opacity: 0.2; pointer-events: none; background: transparent; }
@@ -291,7 +293,9 @@ function initPhotoEditor(input) {
             const img = document.getElementById('imageToCrop');
             img.src = e.target.result;
             img.onload = () => {
-                document.getElementById('photoEditor').style.display = 'block';
+                const editorEl = document.getElementById('photoEditor');
+                editorEl.style.display = 'block';
+                editorEl.classList.add('active'); // Ativa pointer-events no mobile
                 document.getElementById('editorTools').classList.remove('hidden');
                 document.getElementById('imgPreview').classList.add('hidden');
                 currentZoom = 1; imgPosX = 0; imgPosY = 0;
@@ -306,12 +310,34 @@ function applyImgTransform() {
     const img = document.getElementById('imageToCrop');
     img.style.transform = `translate(-50%, -50%) translate(${imgPosX}px, ${imgPosY}px) scale(${currentZoom})`;
 }
+
+// CORREÇÃO DOS EVENTOS MOBILE: Evita travar os cliques globais do celular
 const editor = document.getElementById('photoEditor');
-editor.onmousedown = (e) => { isDragging = true; startX = e.clientX - imgPosX; startY = e.clientY - imgPosY; };
-editor.ontouchstart = (e) => { isDragging = true; startX = e.touches[0].clientX - imgPosX; startY = e.touches[0].clientY - imgPosY; };
-window.onmousemove = (e) => { if(isDragging) { imgPosX = e.clientX - startX; imgPosY = e.clientY - startY; applyImgTransform(); } };
-window.ontouchmove = (e) => { if(isDragging) { imgPosX = e.touches[0].clientX - startX; imgPosY = e.touches[0].clientY - startY; applyImgTransform(); } };
-window.onmouseup = window.ontouchend = () => isDragging = false;
+function dragStart(e) {
+    if (!editor.classList.contains('active')) return;
+    isDragging = true;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    startX = clientX - imgPosX;
+    startY = clientY - imgPosY;
+}
+function dragMove(e) {
+    if(!isDragging) return;
+    if(e.cancelable) e.preventDefault(); // Previne scroll apenas durante o arraste da foto
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    imgPosX = clientX - startX;
+    imgPosY = clientY - startY;
+    applyImgTransform();
+}
+function dragEnd() { isDragging = false; }
+
+editor.addEventListener('mousedown', dragStart);
+editor.addEventListener('touchstart', dragStart, {passive: true});
+window.addEventListener('mousemove', dragMove);
+window.addEventListener('touchmove', dragMove, {passive: false});
+window.addEventListener('mouseup', dragEnd);
+window.addEventListener('touchend', dragEnd);
 
 function confirmCrop() {
     const canvas = document.createElement('canvas');
@@ -328,7 +354,10 @@ function confirmCrop() {
     base64Image = canvas.toDataURL('image/jpeg', 0.9);
     document.getElementById('imgPreview').src = base64Image;
     document.getElementById('imgPreview').classList.remove('hidden');
-    document.getElementById('photoEditor').style.display = 'none';
+    
+    const editorEl = document.getElementById('photoEditor');
+    editorEl.style.display = 'none';
+    editorEl.classList.remove('active'); // Desativa pointer-events liberando o mobile
     document.getElementById('editorTools').classList.add('hidden');
 }
 
