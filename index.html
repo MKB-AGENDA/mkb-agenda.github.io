@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -10,9 +10,38 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        :root { --pink: #ff40b5; --bg: #050505; --card: #111111; --text: #ffffff; --border: rgba(255,255,255,0.12); --green: #2ecc71; --blue: #3498db; --red: #e74c3c; }
+        /* MODO ESCURO (PADRAO) */
+        :root { 
+            --pink: #ff40b5; 
+            --bg: #050505; 
+            --card: #111111; 
+            --text: #ffffff; 
+            --subtext: #aaaaaa;
+            --border: rgba(255,255,255,0.12); 
+            --input-bg: #000000;
+            --green: #2ecc71; 
+            --blue: #3498db; 
+            --red: #e74c3c; 
+            --modal-view-bg: #262324;
+            --item-bg: rgba(255,255,255,0.05);
+        }
+
+        /* DETECCAO AUTOMATICA DE TEMA CLARO */
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f4f5f7;
+                --card: #ffffff;
+                --text: #1a1a1a;
+                --subtext: #555555;
+                --border: rgba(0,0,0,0.12);
+                --input-bg: #f0f0f0;
+                --modal-view-bg: #ffffff;
+                --item-bg: rgba(0,0,0,0.04);
+            }
+        }
+
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: var(--bg); color: var(--text); padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        body { margin: 0; background: var(--bg); color: var(--text); padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; transition: background 0.3s, color 0.3s; }
         
         #empresaTitle { color: var(--blue); font-size: 28px; font-weight: 800; margin: 20px 0; text-align: center; width: 100%; }
 
@@ -24,49 +53,72 @@
             #mainAgenda { flex: 1; max-width: 600px; }
         }
 
-        #displayPhoto { width: 100%; aspect-ratio: 1/1; border-radius: 30px; object-fit: cover; border: 1px solid var(--border); background: #1a1a1a; }
+        #displayPhoto { width: 100%; aspect-ratio: 1/1; border-radius: 30px; object-fit: cover; border: 1px solid var(--border); background: var(--item-bg); }
         #displayBio { margin-top: 15px; font-size: 20px; font-weight: 700; text-align: center; }
 
-        .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; }
+        .card-inner { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.15); width: 100%; transition: background 0.3s; }
 
-        /* CORREÇÃO MOBILE: pointer-events none por padrão para não bloquear cliques quando escondido */
         #photoEditor { display: none; position: relative; width: 300px; height: 300px; overflow: hidden; border-radius: 20px; background: #000; margin: 0 auto 15px; border: 2px solid var(--pink); cursor: move; pointer-events: none; }
         #photoEditor.active { pointer-events: auto; }
         #imageToCrop { position: absolute; top: 50%; left: 50%; transform-origin: center; pointer-events: none; }
         .editor-controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
 
         .hours-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 450px; overflow-y: auto; padding-right: 5px; }
-        .h-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .h-pill { background: var(--item-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text); }
         .h-pill.active { border: 2px solid var(--pink); }
-        .h-pill.booked { border: 2px solid var(--green); background: rgba(46, 204, 113, 0.1); }
+        .h-pill.booked { border: 2px solid var(--green); background: rgba(46, 204, 113, 0.15); }
+        .h-pill.past-hour { opacity: 0.4; background: #222; border-color: #444; color: #888; }
+        .h-pill.past-hour.client-disabled { pointer-events: none; }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
-        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; user-select: none; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: var(--item-bg); border-radius: 10px; cursor: pointer; user-select: none; color: var(--text); }
         .day.selected { background: var(--pink) !important; color: #fff; }
         .day.has-hours { border: 2px solid var(--pink); color: var(--pink); font-weight: bold; }
         .day.disabled { opacity: 0.2; pointer-events: none; background: transparent; }
+        .day.past-day { background: #333333 !important; color: #777777 !important; border-color: #444444 !important; }
+        .day.past-day.client-disabled { pointer-events: none; opacity: 0.4; }
 
-        input, textarea, select { width: 100%; padding: 16px; margin-top: 12px; background: #000; color: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
+        input, textarea, select { width: 100%; padding: 16px; margin-top: 12px; background: var(--input-bg); color: var(--text); border-radius: 14px; border: 1px solid var(--border); font-size: 16px; }
         .btn-main { width: 100%; padding: 18px; border-radius: 16px; border:none; font-weight: 700; cursor: pointer; margin-top: 12px; font-size: 16px; }
         .btn-pink { background: var(--pink); color: #fff; }
         .btn-green { background: var(--green); color: #000; }
         .btn-red { background: var(--red); color: #fff; padding: 8px 15px; border-radius: 8px; font-size: 12px; border: none; cursor: pointer; }
-        .btn-sec { background: rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; }
+        .btn-sec { background: var(--item-bg); color: var(--text); padding: 10px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; }
 
         .hidden { display: none !important; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .modal-content { background: #1a1a1a; padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 480px; }
-        .btn-edit-hour { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 16px; padding: 5px; margin-left: 10px; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 28px; border: 2px solid var(--pink); width: 100%; max-width: 480px; }
+        .btn-edit-hour { background: transparent; border: none; color: var(--subtext); cursor: pointer; font-size: 16px; padding: 5px; margin-left: 10px; }
         .btn-edit-hour:hover { color: var(--pink); }
 
         .mgmt-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
-        .mgmt-tab { flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; text-align: center; font-size: 14px; }
-        .mgmt-tab.active { background: var(--pink); border-color: var(--pink); }
-        .auto-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 15px; border-radius: 14px; margin-bottom: 15px; }
+        .mgmt-tab { flex: 1; padding: 10px; background: var(--item-bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); cursor: pointer; font-weight: bold; text-align: center; font-size: 14px; }
+        .mgmt-tab.active { background: var(--pink); border-color: var(--pink); color: #fff; }
+        .auto-box { background: var(--item-bg); border: 1px solid var(--border); padding: 15px; border-radius: 14px; margin-bottom: 15px; }
         .time-range-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
         .time-range-row input { margin-top: 0; text-align: center; }
-        .exception-pill { display: inline-flex; align-items: center; background: rgba(231, 76, 60, 0.2); border: 1px solid var(--red); color: #fff; padding: 5px 10px; border-radius: 8px; font-size: 12px; gap: 5px; margin: 5px 5px 0 0; }
+        .exception-pill { display: inline-flex; align-items: center; background: rgba(231, 76, 60, 0.2); border: 1px solid var(--red); color: var(--text); padding: 5px 10px; border-radius: 8px; font-size: 12px; gap: 5px; margin: 5px 5px 0 0; }
         .exception-pill span { cursor: pointer; color: var(--red); font-weight: bold; }
+
+        .modal-clients-view { background: var(--modal-view-bg); border-radius: 24px; padding: 20px; width: 100%; max-width: 950px; color: var(--pink); box-shadow: 0 0 20px rgba(0,0,0,0.5); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+        .clients-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .btn-voltar-img { color: var(--pink); background: none; border: none; font-size: 20px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+        
+        .month-header-title { display: flex; align-items: center; justify-content: center; gap: 15px; width: 100%; }
+        .month-header-title span.active-month { color: var(--pink); font-size: 28px; font-weight: 900; text-transform: uppercase; text-align: center; min-width: 140px; }
+        .month-header-title span.side-month { color: var(--pink); opacity: 0.6; font-size: 18px; font-weight: 700; cursor: pointer; text-transform: uppercase; flex: 1; text-align: center; }
+
+        .week-columns { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; border-top: 2px solid var(--pink); border-bottom: 2px solid var(--pink); margin-top: 10px; flex: 1; overflow-x: auto; min-height: 350px; }
+        .week-col { border-right: 2px solid var(--pink); padding: 5px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; max-height: 60vh; }
+        .week-col:last-child { border-right: none; }
+        .week-col-header { color: var(--pink); font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; text-align: center; position: sticky; top: 0; background: var(--modal-view-bg); width: 100%; padding: 4px 0; }
+        .client-entry { background: var(--item-bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 8px; margin-bottom: 8px; width: 100%; font-size: 11px; text-align: center; word-break: break-word; }
+
+        @media (max-width: 600px) {
+            .month-header-title span.active-month { font-size: 20px; min-width: 100px; }
+            .month-header-title span.side-month { font-size: 13px; }
+            .week-columns { grid-template-columns: repeat(7, minmax(80px, 1fr)); }
+        }
     </style>
 </head>
 <body>
@@ -75,82 +127,89 @@
 
 <div class="client-wrapper">
     <div id="clientProfileBox" class="hidden">
-        <img id="displayPhoto" src="">
-        <div id="displayBio">Loading...</div>
+        <img id="displayPhoto" src="" alt="Foto de perfil">
+        <div id="displayBio" data-i18n="loading">Carregando...</div>
     </div>
 
     <div id="mainAgenda">
         <div id="profLogin" class="card-inner hidden">
-            <h3 style="text-align:center">Admin Login</h3>
+            <h3 style="text-align:center" data-i18n="adminLogin">Login de Administrador</h3>
             <input type="email" id="email" placeholder="Email">
-            <input type="password" id="pass" placeholder="Password">
-            <button class="btn-main btn-pink" onclick="login()">Login</button>
-            <p style="text-align:center; font-size:14px; margin-top:15px; color:#888;">No account? <a href="javascript:void(0)" onclick="showScreen('profRegister')" style="color:var(--pink)">Create Account</a></p>
+            <input type="password" id="pass" placeholder="Senha" data-i18n-ph="password">
+            <button class="btn-main btn-pink" onclick="login()" data-i18n="login">Entrar</button>
+            <p style="text-align:center; font-size:14px; margin-top:15px; color:var(--subtext);"><span data-i18n="noAccount">Nao tem conta</span> <a href="javascript:void(0)" onclick="showScreen('profRegister')" style="color:var(--pink)" data-i18n="createAccount">Criar Conta</a></p>
         </div>
 
         <div id="profRegister" class="hidden card-inner">
-            <h3 style="text-align:center">Create Account</h3>
-            <input type="email" id="regEmail" placeholder="New Email">
-            <input type="password" id="regPass" placeholder="New Password">
-            <button class="btn-main btn-green" onclick="placeOrder()">REQUEST ACCESS</button>
-            <button class="btn-sec" onclick="showScreen('profLogin')" style="width:100%; margin-top:10px;">Back to Login</button>
+            <h3 style="text-align:center" data-i18n="createAccount">Criar Conta</h3>
+            <input type="email" id="regEmail" placeholder="Novo Email" data-i18n-ph="newEmail">
+            <input type="password" id="regPass" placeholder="Nova Senha" data-i18n-ph="newPassword">
+            <button class="btn-main btn-green" onclick="placeOrder()" data-i18n="requestAccess">SOLICITAR ACESSO</button>
+            <button class="btn-sec" onclick="showScreen('profLogin')" style="width:100%; margin-top:10px;" data-i18n="backToLogin">Voltar para Login</button>
         </div>
 
         <div id="admSection" class="hidden card-inner">
             <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
-                <button class="btn-sec" onclick="logout()">Logout</button>
+                <button class="btn-sec" onclick="logout()" data-i18n="logout">Sair</button>
                 <b id="tokenDisplay" style="color:var(--pink)"></b>
             </div>
             <div style="text-align:center;">
                 <div id="photoEditor">
-                    <img id="imageToCrop" src="">
+                    <img id="imageToCrop" src="" alt="Editar foto">
                 </div>
                 <div id="editorTools" class="hidden">
                     <div class="editor-controls">
                         <button class="btn-sec" onclick="adjustZoom(0.1)">Zoom +</button>
                         <button class="btn-sec" onclick="adjustZoom(-0.1)">Zoom -</button>
-                        <button class="btn-main btn-pink" onclick="confirmCrop()" style="width:auto; margin:0; padding:10px 20px;">CONFIRM PHOTO</button>
+                        <button class="btn-main btn-pink" onclick="confirmCrop()" style="width:auto; margin:0; padding:10px 20px;" data-i18n="confirmPhoto">CONFIRMAR FOTO</button>
                     </div>
                 </div>
-                <img id="imgPreview" src="https://via.placeholder.com/150" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--pink); cursor:pointer; margin-bottom: 10px;" onclick="document.getElementById('fileInput').click()">
+                <img id="imgPreview" src="https://via.placeholder.com/150" alt="Preview" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--pink); cursor:pointer; margin-bottom: 10px;" onclick="document.getElementById('fileInput').click()">
                 <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="initPhotoEditor(this)">
             </div>
-            <input type="text" id="companyNameInput" placeholder="Business Name">
+            <input type="text" id="companyNameInput" placeholder="Nome da Empresa" data-i18n-ph="businessName">
             <input type="number" id="myPhone" placeholder="WhatsApp (5521...)">
-            <textarea id="bioInput" placeholder="Bio description..."></textarea>
-            <h4 style="margin: 20px 0 10px;">Services</h4>
+            <select id="timezoneSelect">
+                <option value="America/Sao_Paulo">Fuso Horário: Brasília (GMT-3)</option>
+                <option value="America/Manaus">Fuso Horário: Manaus (GMT-4)</option>
+                <option value="America/Noronha">Fuso Horário: F. de Noronha (GMT-2)</option>
+                <option value="UTC">Fuso Horário: UTC</option>
+            </select>
+            <textarea id="bioInput" placeholder="Descricao da Bio..." data-i18n-ph="bioPlaceholder"></textarea>
+            <h4 style="margin: 20px 0 10px;" data-i18n="services">Servicos</h4>
             <div id="servicesList"></div>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <input type="text" id="newServiceInput" placeholder="Add Service" style="margin:0;">
-                <button class="btn-sec" onclick="addService()">Add</button>
+                <input type="text" id="newServiceInput" placeholder="Adicionar Servico" data-i18n-ph="addService" style="margin:0;">
+                <button class="btn-sec" onclick="addService()" data-i18n="add">Adicionar</button>
             </div>
-            <button class="btn-main btn-green" onclick="saveConfig()">SAVE SETTINGS</button>
-            <button class="btn-main btn-pink" onclick="showScreen('agendaCore')">MANAGE CALENDAR</button>
+            <button class="btn-main btn-green" onclick="saveConfig()" data-i18n="saveSettings">SALVAR CONFIGURACOES</button>
+            <button id="btnSeeClients" class="btn-main btn-pink" onclick="openBookedClientsModal()" data-i18n="seeBookedClients">VER CLIENTES MARCADOS</button>
+            <button class="btn-main btn-pink" onclick="showScreen('agendaCore')" style="background:var(--blue);" data-i18n="manageCalendar">GERENCIAR CALENDARIO</button>
         </div>
 
         <div id="agendaCore" class="hidden card-inner">
-            <button id="btnBackEditor" class="btn-sec hidden" onclick="showScreen('admSection')" style="width:100%; margin-bottom:15px;">⚙️ Editor</button>
+            <button id="btnBackEditor" class="btn-sec hidden" onclick="showScreen('admSection')" style="width:100%; margin-bottom:15px;" data-i18n="editor">Editor</button>
             <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px;">
-                <button class="btn-sec" onclick="changeMonth(-1)">◀</button>
+                <button class="btn-sec" onclick="changeMonth(-1)">&lt;</button>
                 <b id="monthLabel"></b>
-                <button class="btn-sec" onclick="changeMonth(1)">▶</button>
+                <button class="btn-sec" onclick="changeMonth(1)">&gt;</button>
             </div>
             <div class="cal-grid" id="admCalendar"></div>
 
             <div id="mgmtTabsContainer" class="mgmt-tabs">
-                <div id="tabManual" class="mgmt-tab active" onclick="switchMgmtMode('manual')">Manual Mode</div>
-                <div id="tabAuto" class="mgmt-tab" onclick="switchMgmtMode('auto')">Automatic Mode</div>
+                <div id="tabManual" class="mgmt-tab active" onclick="switchMgmtMode('manual')" data-i18n="manualMode">Modo Manual</div>
+                <div id="tabAuto" class="mgmt-tab" onclick="switchMgmtMode('auto')" data-i18n="autoMode">Modo Automatico</div>
             </div>
 
             <div id="panelAuto" class="auto-box hidden">
-                <label style="font-size: 13px; color: #aaa;">Work Schedule Interval:</label>
+                <label style="font-size: 13px; color: var(--subtext);" data-i18n="workSchedule">Intervalo de Horario de Trabalho:</label>
                 <div class="time-range-row">
                     <input type="text" id="autoStart" placeholder="10:00" maxlength="5">
                     <span>—</span>
                     <input type="text" id="autoEnd" placeholder="19:00" maxlength="5">
                 </div>
                 
-                <label style="font-size: 13px; color: #aaa; margin-top: 15px; display: block;">Add Exception Hours (e.g. Lunch/Break):</label>
+                <label style="font-size: 13px; color: var(--subtext); margin-top: 15px; display: block;" data-i18n="addExceptions">Adicionar Excecoes (Ex: Almoco/Pausa):</label>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="autoExceptStart" placeholder="12:00" maxlength="5" style="margin-top:5px;">
                     <input type="text" id="autoExceptEnd" placeholder="13:00" maxlength="5" style="margin-top:5px;">
@@ -158,24 +217,48 @@
                 </div>
                 <div id="exceptionsContainer" style="margin-bottom: 10px;"></div>
 
-                <button class="btn-main btn-green" onclick="applyAutomaticSchedule()" style="padding: 12px; margin-top: 10px; font-size: 14px;">APPLY AUTOMATIC HOURS</button>
+                <button class="btn-main btn-green" onclick="applyAutomaticSchedule()" style="padding: 12px; margin-top: 10px; font-size: 14px;" data-i18n="applyAuto">APLICAR HORARIOS AUTOMATICOS</button>
             </div>
 
             <div class="hours-grid" id="admHoursList"></div>
-            <button id="btnShare" class="btn-main hidden" onclick="shareAgenda()" style="background:#f1c40f; color:#000;">🔗 COPY LINK</button>
+            
+            <button id="btnShare" class="btn-main hidden" onclick="shareAgenda()" style="background:#f1c40f; color:#000;" data-i18n="copyLink">COPIAR LINK</button>
         </div>
     </div>
 </div>
 
 <div id="modalBooking" class="modal hidden">
     <div class="modal-content">
-        <h3 style="text-align:center; color:var(--pink);">Agendar Horário</h3>
+        <h3 style="text-align:center; color:var(--pink);" data-i18n="bookTime">Agendar Horario</h3>
         <p id="modalTimeLabel" style="text-align:center; font-weight:bold;"></p>
-        <input type="text" id="clientName" placeholder="Seu Nome Completo">
-        <input type="text" id="clientObs" placeholder="Observações (Opcional)">
+        <input type="text" id="clientName" placeholder="Seu Nome Completo *" data-i18n-ph="fullName">
+        <input type="text" id="clientObs" placeholder="Observacoes (Obrigatorio) *" data-i18n-ph="obs">
         <select id="serviceSelect"></select>
-        <button class="btn-main btn-pink" onclick="confirmBooking()">BOOK NOW</button>
-        <button class="btn-sec" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
+        <button class="btn-main btn-pink" onclick="confirmBooking()" data-i18n="bookNow">CONFIRMAR NO WHATSAPP</button>
+        <button class="btn-sec" style="width:100%; margin-top:10px;" onclick="closeModals()" data-i18n="cancel">Cancelar</button>
+    </div>
+</div>
+
+<div id="modalBookedClients" class="modal hidden">
+    <div class="modal-clients-view">
+        <div class="clients-header">
+            <button class="btn-voltar-img" onclick="closeBookedClientsModal()" data-i18n="back">VOLTAR</button>
+            <div class="month-header-title">
+                <span class="side-month" onclick="changeMonthClients(-1)" id="prevMonthClient"></span>
+                <span class="active-month" id="currMonthClient"></span>
+                <span class="side-month" onclick="changeMonthClients(1)" id="nextMonthClient"></span>
+            </div>
+            <div style="width: 60px;"></div>
+        </div>
+        <div class="week-columns">
+            <div class="week-col"><div class="week-col-header" data-i18n="sun">DOMINGO</div><div id="col-0" style="width:100%;"></div></div>
+            <div class="week-col"><div class="week-col-header" data-i18n="mon">SEGUNDA</div><div id="col-1" style="width:100%;"></div></div>
+            <div class="week-col"><div class="week-col-header" data-i18n="tue">TERCA</div><div id="col-2" style="width:100%;"></div></div>
+            <div class="week-col"><div class="week-col-header" data-i18n="wed">QUARTA</div><div id="col-3" style="width:100%;"></div></div>
+            <div class="week-col"><div class="week-col-header" data-i18n="thu">QUINTA</div><div id="col-4" style="width:100%;"></div></div>
+            <div class="week-col"><div class="week-col-header" data-i18n="fri">SEXTA</div><div id="col-5" style="width:100%;"></div></div>
+            <div class="week-col"><div class="week-col-header" data-i18n="sat">SABADO</div><div id="col-6" style="width:100%;"></div></div>
+        </div>
     </div>
 </div>
 
@@ -184,10 +267,178 @@ const firebaseConfig = { apiKey: "AIzaSyDZcwSrA4dmQY-XKVXQi_jXyz01aZhCr1Q", auth
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+const translations = {
+    en: {
+        loading: "Loading...",
+        adminLogin: "Admin Login",
+        password: "Password",
+        login: "Login",
+        noAccount: "No account",
+        createAccount: "Create Account",
+        newEmail: "New Email",
+        newPassword: "New Password",
+        requestAccess: "REQUEST ACCESS",
+        backToLogin: "Back to Login",
+        logout: "Logout",
+        confirmPhoto: "CONFIRM PHOTO",
+        businessName: "Business Name",
+        bioPlaceholder: "Bio description...",
+        services: "Services",
+        addService: "Add Service",
+        add: "Add",
+        saveSettings: "SAVE SETTINGS",
+        seeBookedClients: "SEE BOOKED CLIENTS",
+        manageCalendar: "MANAGE CALENDAR",
+        editor: "Editor",
+        manualMode: "Manual Mode",
+        autoMode: "Automatic Mode",
+        workSchedule: "Work Schedule Interval:",
+        addExceptions: "Add Exception Hours (e.g. Lunch/Break):",
+        applyAuto: "APPLY AUTOMATIC HOURS",
+        copyLink: "COPY LINK",
+        bookTime: "Book Appointment",
+        fullName: "Your Full Name *",
+        obs: "Notes (Required) *",
+        bookNow: "CONFIRM ON WHATSAPP",
+        cancel: "Cancel",
+        back: "BACK",
+        sun: "SUNDAY", mon: "MONDAY", tue: "TUESDAY", wed: "WEDNESDAY", thu: "THURSDAY", fri: "FRIDAY", sat: "SATURDAY",
+        occupied: "Occupied",
+        dayLabel: "Day",
+        cancelConfirm: "Are you sure you want to unbook this time slot",
+        deleteHourConfirm: "Do you really want to delete this schedule",
+        saved: "Saved",
+        autoApplied: "Automatic hours applied",
+        selectDayFirst: "Please select a day on the calendar first",
+        setStartEnd: "Please set start and end work hours",
+        nameRequired: "Name is required",
+        obsRequired: "Notes/Observations field is required",
+        linkCopied: "Link copied: "
+    },
+    pt: {
+        loading: "Carregando...",
+        adminLogin: "Login de Administrador",
+        password: "Senha",
+        login: "Entrar",
+        noAccount: "Nao tem conta",
+        createAccount: "Criar Conta",
+        newEmail: "Novo Email",
+        newPassword: "Nova Senha",
+        requestAccess: "SOLICITAR ACESSO",
+        backToLogin: "Voltar para Login",
+        logout: "Sair",
+        confirmPhoto: "CONFIRMAR FOTO",
+        businessName: "Nome da Empresa",
+        bioPlaceholder: "Descricao da Bio...",
+        services: "Servicos",
+        addService: "Adicionar Servico",
+        add: "Adicionar",
+        saveSettings: "SALVAR CONFIGURACOES",
+        seeBookedClients: "VER CLIENTES MARCADOS",
+        manageCalendar: "GERENCIAR CALENDARIO",
+        editor: "Editor",
+        manualMode: "Modo Manual",
+        autoMode: "Modo Automatico",
+        workSchedule: "Intervalo de Horario de Trabalho:",
+        addExceptions: "Adicionar Excecoes (Ex: Almoco/Pausa):",
+        applyAuto: "APLICAR HORARIOS AUTOMATICOS",
+        copyLink: "COPIAR LINK",
+        bookTime: "Agendar Horario",
+        fullName: "Seu Nome Completo *",
+        obs: "Observacoes (Obrigatorio) *",
+        bookNow: "CONFIRMAR NO WHATSAPP",
+        cancel: "Cancelar",
+        back: "VOLTAR",
+        sun: "DOMINGO", mon: "SEGUNDA", tue: "TERCA", wed: "QUARTA", thu: "QUINTA", fri: "SEXTA", sat: "SABADO",
+        occupied: "Ocupado",
+        dayLabel: "Dia",
+        cancelConfirm: "Tem certeza que quer desmarcar este horario",
+        deleteHourConfirm: "Deseja realmente excluir este agendamento",
+        saved: "Salvo",
+        autoApplied: "Horarios automaticos aplicados",
+        selectDayFirst: "Por favor selecione um dia no calendario primeiro",
+        setStartEnd: "Defina o horario de inicio e termino",
+        nameRequired: "O nome e obrigatorio",
+        obsRequired: "A observacao e obrigatoria",
+        linkCopied: "Link copiado: "
+    },
+    es: {
+        loading: "Cargando...",
+        adminLogin: "Iniciar Sesion Admin",
+        password: "Contrasena",
+        login: "Entrar",
+        noAccount: "No tienes cuenta",
+        createAccount: "Crear Cuenta",
+        newEmail: "Nuevo Correo",
+        newPassword: "Nueva Contrasena",
+        requestAccess: "SOLICITAR ACCESO",
+        backToLogin: "Volver al Login",
+        logout: "Cerrar Sesion",
+        confirmPhoto: "CONFIRMAR FOTO",
+        businessName: "Nombre de la Empresa",
+        bioPlaceholder: "Descripcion de Bio...",
+        services: "Servicios",
+        addService: "Agregar Servicio",
+        add: "Agregar",
+        saveSettings: "GUARDAR CONFIGURACION",
+        seeBookedClients: "VER CLIENTES AGENDADOS",
+        manageCalendar: "GESTIONAR CALENDARIO",
+        editor: "Editor",
+        manualMode: "Modo Manual",
+        autoMode: "Modo Automatico",
+        workSchedule: "Intervalo de Horario de Trabajo:",
+        addExceptions: "Agregar Excepciones (Ej: Almuerzo/Pausa):",
+        applyAuto: "APLICAR HORARIOS AUTOMATICOS",
+        copyLink: "COPIAR ENLACE",
+        bookTime: "Reservar Cita",
+        fullName: "Tu Nombre Completo *",
+        obs: "Notas (Obligatorio) *",
+        bookNow: "CONFIRMAR EN WHATSAPP",
+        cancel: "Cancelar",
+        back: "VOLVER",
+        sun: "DOMINGO", mon: "LUNES", tue: "MARTES", wed: "MIERCOLES", thu: "JUEVES", fri: "VIERNES", sat: "SABADO",
+        occupied: "Ocupado",
+        dayLabel: "Dia",
+        cancelConfirm: "Esta seguro de que desea cancelar esta cita",
+        deleteHourConfirm: "De verdad quieres eliminar esta cita",
+        saved: "Guardado",
+        autoApplied: "Horarios automaticos aplicados",
+        selectDayFirst: "Selecciona primero un dia en el calendario",
+        setStartEnd: "Establece el horario de inicio y fin",
+        nameRequired: "El nombre es obligatorio",
+        obsRequired: "La observacion es obligatoria",
+        linkCopied: "Enlace copiado: "
+    }
+};
+
+let userLang = (navigator.language || navigator.userLanguage || 'en').substring(0, 2);
+if (!translations[userLang]) userLang = 'en';
+
+function t(key) { return translations[userLang][key] || key; }
+
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[userLang][key]) el.innerText = translations[userLang][key];
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+        const key = el.getAttribute('data-i18n-ph');
+        if (translations[userLang][key]) el.placeholder = translations[userLang][key];
+    });
+}
+
 let agendaMaster = {}, customLabels = {}, activeDay = null, tempHour = null, myPhone = "", services = [], loggedUser = null, userToken = null, isClientMode = false, base64Image = "";
+let currentTimezone = 'America/Sao_Paulo';
 let curMonth = new Date().getMonth(), curYear = new Date().getFullYear();
+let clientViewMonth = new Date().getMonth(), clientViewYear = new Date().getFullYear();
 let currentZoom = 1, imgPosX = 0, imgPosY = 0, isDragging = false, startX, startY;
 let currentMgmtMode = 'manual', currentExceptions = [];
+
+function getBrasiliaDate() {
+    const now = new Date();
+    const str = now.toLocaleString("en-US", { timeZone: currentTimezone });
+    return new Date(str);
+}
 
 function showScreen(id) {
     document.querySelectorAll('.card-inner, #profRegister').forEach(el => el.classList.add('hidden'));
@@ -231,16 +482,16 @@ function renderExceptions() {
     const container = document.getElementById('exceptionsContainer');
     container.innerHTML = '';
     currentExceptions.forEach((exc, idx) => {
-        container.innerHTML += `<div class="exception-pill">${exc.start} - ${exc.end} <span onclick="removeException(${idx})">✖</span></div>`;
+        container.innerHTML += `<div class="exception-pill">${exc.start} - ${exc.end} <span onclick="removeException(${idx})">x</span></div>`;
     });
 }
 
 function applyAutomaticSchedule() {
-    if(!activeDay) return alert("Please select a day on the calendar first!");
+    if(!activeDay) return alert(t('selectDayFirst'));
     const startStr = document.getElementById('autoStart').value.trim();
     const endStr = document.getElementById('autoEnd').value.trim();
     
-    if(!startStr || !endStr) return alert("Please set start and end work hours!");
+    if(!startStr || !endStr) return alert(t('setStartEnd'));
 
     if(!agendaMaster['Master']) agendaMaster['Master'] = {};
     if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
@@ -281,7 +532,7 @@ function applyAutomaticSchedule() {
     }
 
     db.ref('users/'+loggedUser).update({agenda: agendaMaster}).then(() => {
-        alert("Automatic hours applied!");
+        alert(t('autoApplied'));
         updateUI();
     });
 }
@@ -295,7 +546,7 @@ function initPhotoEditor(input) {
             img.onload = () => {
                 const editorEl = document.getElementById('photoEditor');
                 editorEl.style.display = 'block';
-                editorEl.classList.add('active'); // Ativa pointer-events no mobile
+                editorEl.classList.add('active');
                 document.getElementById('editorTools').classList.remove('hidden');
                 document.getElementById('imgPreview').classList.add('hidden');
                 currentZoom = 1; imgPosX = 0; imgPosY = 0;
@@ -311,7 +562,6 @@ function applyImgTransform() {
     img.style.transform = `translate(-50%, -50%) translate(${imgPosX}px, ${imgPosY}px) scale(${currentZoom})`;
 }
 
-// CORREÇÃO DOS EVENTOS MOBILE: Evita travar os cliques globais do celular
 const editor = document.getElementById('photoEditor');
 function dragStart(e) {
     if (!editor.classList.contains('active')) return;
@@ -323,7 +573,7 @@ function dragStart(e) {
 }
 function dragMove(e) {
     if(!isDragging) return;
-    if(e.cancelable) e.preventDefault(); // Previne scroll apenas durante o arraste da foto
+    if(e.cancelable) e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     imgPosX = clientX - startX;
@@ -357,7 +607,7 @@ function confirmCrop() {
     
     const editorEl = document.getElementById('photoEditor');
     editorEl.style.display = 'none';
-    editorEl.classList.remove('active'); // Desativa pointer-events liberando o mobile
+    editorEl.classList.remove('active');
     document.getElementById('editorTools').classList.add('hidden');
 }
 
@@ -365,7 +615,7 @@ async function login() {
     const e = document.getElementById('email').value.trim().toLowerCase(), p = document.getElementById('pass').value;
     const USERS = { "netosolucoes12@gmail.com": "jworg445566", "sarajanemkb@gmail.com": "jworg445566" };
     if(USERS[e] === p) { loggedUser = e.replace(/\./g, '_'); localStorage.setItem('mkb_user', e); await checkToken(loggedUser); showScreen('admSection'); } 
-    else alert("Erro!");
+    else alert("Erro");
 }
 
 async function checkToken(uid) {
@@ -381,6 +631,7 @@ function loadData(uid) {
         const d = s.val() || {}; agendaMaster = d.agenda || {}; myPhone = d.phone || ""; services = d.services || [];
         customLabels = d.customLabels || {};
         base64Image = d.profilePhoto || "";
+        currentTimezone = d.timezone || 'America/Sao_Paulo';
         document.getElementById('displayPhoto').src = base64Image || "https://via.placeholder.com/400";
         document.getElementById('displayBio').innerText = d.profileBio || "";
         document.getElementById('empresaTitle').innerText = d.companyName || "Agenda";
@@ -388,6 +639,7 @@ function loadData(uid) {
             document.getElementById('companyNameInput').value = d.companyName || "";
             document.getElementById('myPhone').value = myPhone;
             document.getElementById('bioInput').value = d.profileBio || "";
+            document.getElementById('timezoneSelect').value = currentTimezone;
             if(base64Image) document.getElementById('imgPreview').src = base64Image;
             renderServicesEditor();
         }
@@ -397,33 +649,53 @@ function loadData(uid) {
 
 function renderServicesEditor() {
     const list = document.getElementById('servicesList'); list.innerHTML = "";
-    services.forEach((s, i) => { list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-top:5px; padding:10px; background:#222; border-radius:10px;">${s} <span onclick="removeService(${i})" style="color:red; cursor:pointer;">✖</span></div>`; });
+    services.forEach((s, i) => { list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-top:5px; padding:10px; background:var(--item-bg); border-radius:10px;">${s} <span onclick="removeService(${i})" style="color:red; cursor:pointer;">x</span></div>`; });
 }
 function addService() { const v = document.getElementById('newServiceInput').value; if(v){services.push(v); document.getElementById('newServiceInput').value=""; renderServicesEditor();} }
 function removeService(i) { services.splice(i,1); renderServicesEditor(); }
-function saveConfig() { db.ref('users/'+loggedUser).update({ companyName: document.getElementById('companyNameInput').value, phone: document.getElementById('myPhone').value, profileBio: document.getElementById('bioInput').value, profilePhoto: base64Image, services: services }).then(() => alert("Saved!")); }
+function saveConfig() { 
+    db.ref('users/'+loggedUser).update({ 
+        companyName: document.getElementById('companyNameInput').value, 
+        phone: document.getElementById('myPhone').value, 
+        profileBio: document.getElementById('bioInput').value, 
+        profilePhoto: base64Image, 
+        services: services,
+        timezone: document.getElementById('timezoneSelect').value
+    }).then(() => alert(t('saved'))); 
+}
 
 function renderCalendar() {
     const grid = document.getElementById('admCalendar'); grid.innerHTML = "";
-    document.getElementById('monthLabel').innerText = `${new Intl.DateTimeFormat('pt-BR', {month:'long'}).format(new Date(curYear, curMonth))} / ${curYear}`;
+    document.getElementById('monthLabel').innerText = `${new Intl.DateTimeFormat(userLang, {month:'long'}).format(new Date(curYear, curMonth))} / ${curYear}`;
     const days = new Date(curYear, curMonth+1, 0).getDate();
     
-    const hoje = new Date();
+    const hoje = getBrasiliaDate();
     hoje.setHours(0,0,0,0);
 
     for(let d=1; d<=days; d++) {
         const k = `${d}-${curMonth+1}-${curYear}`;
         const dataFoco = new Date(curYear, curMonth, d);
+        dataFoco.setHours(0,0,0,0);
+
         const has = agendaMaster['Master']?.[k];
+        const isPast = dataFoco < hoje;
         
         const div = document.createElement('div');
-        
-        if(isClientMode && dataFoco < hoje) {
-            div.className = "day disabled";
-        } else {
-            div.className = `day ${activeDay === k ? 'selected' : ''} ${has ? 'has-hours' : ''}`;
-            div.onclick = () => { activeDay = k; updateUI(); };
+        let classes = `day ${activeDay === k ? 'selected' : ''} ${has ? 'has-hours' : ''}`;
+
+        if(isPast) {
+            classes += " past-day";
+            if(isClientMode) {
+                classes += " client-disabled";
+            }
         }
+
+        div.className = classes;
+        div.onclick = () => { 
+            if(isClientMode && isPast) return;
+            activeDay = k; 
+            updateUI(); 
+        };
         
         div.innerText = d; 
         grid.appendChild(div);
@@ -432,7 +704,7 @@ function renderCalendar() {
 
 function editHourLabel(originalHour) {
     const atualLabel = customLabels[originalHour] || originalHour;
-    const novoLabel = prompt(`Digite o novo formato para o horário ${originalHour}:`, atualLabel);
+    const novoLabel = prompt(`Edit label for ${originalHour}`, atualLabel);
     if (novoLabel !== null && novoLabel.trim() !== "") {
         customLabels[originalHour] = novoLabel.trim();
         db.ref('users/'+loggedUser).update({ customLabels: customLabels }).then(() => {
@@ -445,9 +717,8 @@ function renderHours() {
     const grid = document.getElementById('admHoursList'); grid.innerHTML = "";
     const dayData = agendaMaster['Master']?.[activeDay] || {};
     
-    const agora = new Date();
+    const agora = getBrasiliaDate();
     const [diaAtivo, mesAtivo, anoAtivo] = activeDay.split('-').map(Number);
-    const ehHoje = agora.getDate() === diaAtivo && (agora.getMonth() + 1) === mesAtivo && agora.getFullYear() === anoAtivo;
 
     for(let i = 5; i <= 23; i++) {
         for(let m = 0; m < 60; m += 30) {
@@ -455,36 +726,43 @@ function renderHours() {
             const info = dayData[h];
             const labelExibido = customLabels[h] || h;
 
-            if (isClientMode && ehHoje && (!info || !info.cliente)) {
-                const [horaH, minH] = h.split(':').map(Number);
-                const horaLimite = new Date();
-                horaLimite.setHours(horaH, minH, 0, 0);
-                if (agora > horaLimite) continue;
-            }
-            
-            if(isClientMode && (!info || info.s !== "OPEN")) {
-                if(info?.cliente) { } 
-                else if(!info) continue;
+            const [horaH, minH] = h.split(':').map(Number);
+            const horaLimite = new Date(anoAtivo, mesAtivo - 1, diaAtivo, horaH, minH, 0, 0);
+            const isHourPast = agora > horaLimite;
+
+            if(isClientMode && (!info || info.s !== "OPEN") && !info?.cliente) {
+                continue;
             }
 
             const p = document.createElement('div');
-            p.className = `h-pill ${info ? (info.cliente ? 'booked' : 'active') : ''}`;
+            let hourClass = `h-pill ${info ? (info.cliente ? 'booked' : 'active') : ''}`;
+
+            if(isHourPast) {
+                hourClass += " past-hour";
+                if(isClientMode) {
+                    hourClass += " client-disabled";
+                }
+            }
+
+            p.className = hourClass;
             
             let content = `<b>${labelExibido}</b>`;
             
             if(!isClientMode) {
                 if(info?.cliente) {
-                    content += `<div style="font-size:12px">👤 ${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCEL</button></div>`;
+                    content += `<div style="font-size:12px">${info.cliente} <button class="btn-red" onclick="cancelBooking('${h}')">CANCELAR</button></div>`;
                 } else {
-                    content += `<button class="btn-edit-hour" onclick="event.stopPropagation(); editHourLabel('${h}')">✏️</button>`;
+                    content += `<button class="btn-edit-hour" onclick="event.stopPropagation(); editHourLabel('${h}')">Editar</button>`;
                 }
             } else if(info?.cliente) {
-                content += `<div style="font-size:12px; color: var(--green);">Ocupado</div>`;
+                content += `<div style="font-size:12px; color: var(--green);">${t('occupied')}</div>`;
             }
             
             p.innerHTML = content;
             p.onclick = (e) => {
                 if(e.target.tagName === 'BUTTON') return;
+                if(isClientMode && isHourPast) return;
+
                 tempHour = h;
                 if(isClientMode) {
                     if(info && !info.cliente) {
@@ -494,9 +772,18 @@ function renderHours() {
                 } else {
                     if(!agendaMaster['Master']) agendaMaster['Master'] = {};
                     if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
-                    if(info) delete agendaMaster['Master'][activeDay][h];
-                    else agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
-                    db.ref('users/'+loggedUser).update({agenda: agendaMaster});
+                    
+                    if (info && info.cliente) {
+                        const certeza = confirm(t('cancelConfirm'));
+                        if (certeza) {
+                            delete agendaMaster['Master'][activeDay][h];
+                            db.ref('users/'+loggedUser).update({agenda: agendaMaster});
+                        }
+                    } else {
+                        if(info) delete agendaMaster['Master'][activeDay][h];
+                        else agendaMaster['Master'][activeDay][h] = {s:"OPEN"};
+                        db.ref('users/'+loggedUser).update({agenda: agendaMaster});
+                    }
                 }
             };
             grid.appendChild(p);
@@ -505,39 +792,147 @@ function renderHours() {
 }
 
 function confirmBooking() {
-    const n = document.getElementById('clientName').value;
-    const o = document.getElementById('clientObs').value;
+    const n = document.getElementById('clientName').value.trim();
+    const o = document.getElementById('clientObs').value.trim();
     const s = document.getElementById('serviceSelect').value;
-    if(!n) return alert("Nome obrigatório");
+
+    if(!n) return alert(t('nameRequired'));
+    if(!o) return alert(t('obsRequired'));
+
+    const labelWhatsapp = customLabels[tempHour] || tempHour;
+    const mensagemWhatsapp = `*Novo Agendamento*\n\n` +
+                             `*Cliente:* ${n}\n` +
+                             `*Servico:* ${s}\n` +
+                             `*Data:* ${activeDay}\n` +
+                             `*Horario:* ${labelWhatsapp}\n` +
+                             `*Observacao:* ${o}`;
+
+    const urlWhatsapp = `https://wa.me/${myPhone}?text=${encodeURIComponent(mensagemWhatsapp)}`;
+
+    if(!agendaMaster['Master']) agendaMaster['Master'] = {};
+    if(!agendaMaster['Master'][activeDay]) agendaMaster['Master'][activeDay] = {};
+    
     agendaMaster['Master'][activeDay][tempHour] = { cliente: n, obs: o, servico: s, s: "BOOKED" };
+    
     db.ref('users/'+loggedUser).update({agenda: agendaMaster}).then(() => {
-        const labelWhatsapp = customLabels[tempHour] || tempHour;
-        window.open(`https://wa.me/${myPhone}?text=Agendamento: ${s} para ${n} em ${activeDay} as ${labelWhatsapp}`);
         closeModals();
+        window.location.href = urlWhatsapp;
     });
 }
 
 function cancelBooking(h) { 
-    if(confirm("Do you really want to delete this schedule?")) { 
+    if(confirm(t('deleteHourConfirm'))) { 
         agendaMaster['Master'][activeDay][h] = {s:"OPEN"}; 
         db.ref('users/'+loggedUser).update({agenda: agendaMaster}); 
     } 
 }
 
+function openBookedClientsModal() {
+    const now = getBrasiliaDate();
+    clientViewMonth = now.getMonth();
+    clientViewYear = now.getFullYear();
+    document.getElementById('modalBookedClients').classList.remove('hidden');
+    renderBookedClientsView();
+}
+
+function closeBookedClientsModal() {
+    document.getElementById('modalBookedClients').classList.add('hidden');
+}
+
+function changeMonthClients(dir) {
+    clientViewMonth += dir;
+    if(clientViewMonth > 11) { clientViewMonth = 0; clientViewYear++; }
+    if(clientViewMonth < 0) { clientViewMonth = 11; clientViewYear--; }
+    renderBookedClientsView();
+}
+
+function renderBookedClientsView() {
+    const formatMonth = (m, y) => new Intl.DateTimeFormat(userLang, { month: 'long' }).format(new Date(y, m));
+    
+    let prevIdx = (clientViewMonth - 1 + 12) % 12;
+    let prevYear = clientViewMonth === 0 ? clientViewYear - 1 : clientViewYear;
+    let nextIdx = (clientViewMonth + 1) % 12;
+    let nextYear = clientViewMonth === 11 ? clientViewYear + 1 : clientViewYear;
+    
+    document.getElementById('prevMonthClient').innerText = formatMonth(prevIdx, prevYear);
+    document.getElementById('currMonthClient').innerText = `${formatMonth(clientViewMonth, clientViewYear)} ${clientViewYear}`;
+    document.getElementById('nextMonthClient').innerText = formatMonth(nextIdx, nextYear);
+    
+    for(let i=0; i<7; i++) {
+        document.getElementById(`col-${i}`).innerHTML = "";
+    }
+    
+    const daysInMonth = new Date(clientViewYear, clientViewMonth + 1, 0).getDate();
+    const masterObj = agendaMaster['Master'] || {};
+    
+    let clientEntriesByCol = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+
+    for(let d = 1; d <= daysInMonth; d++) {
+        const key = `${d}-${clientViewMonth+1}-${clientViewYear}`;
+        const dayData = masterObj[key];
+        
+        if(dayData) {
+            const dateObj = new Date(clientViewYear, clientViewMonth, d);
+            const dayOfWeek = dateObj.getDay();
+            
+            Object.keys(dayData).forEach(hour => {
+                const item = dayData[hour];
+                if(item && item.cliente) {
+                    const labelHour = customLabels[hour] || hour;
+                    clientEntriesByCol[dayOfWeek].push({
+                        day: d,
+                        hourKey: hour,
+                        labelHour: labelHour,
+                        client: item.cliente,
+                        service: item.servico || '',
+                        obs: item.obs || ''
+                    });
+                }
+            });
+        }
+    }
+
+    for(let col = 0; col < 7; col++) {
+        clientEntriesByCol[col].sort((a, b) => {
+            if (b.day !== a.day) return b.day - a.day;
+            return b.hourKey.localeCompare(a.hourKey);
+        });
+
+        const colDiv = document.getElementById(`col-${col}`);
+        if(colDiv) {
+            clientEntriesByCol[col].forEach(item => {
+                colDiv.innerHTML += `
+                    <div class="client-entry">
+                        <b>${t('dayLabel')} ${item.day} (${item.labelHour})</b><br>
+                        ${item.client}<br>
+                        <small>${item.service}</small>
+                        ${item.obs ? `<br><small style="color:var(--subtext);">Obs: ${item.obs}</small>` : ''}
+                    </div>
+                `;
+            });
+        }
+    }
+}
+
 function updateUI() { renderCalendar(); if(activeDay) renderHours(); }
 function logout() { localStorage.clear(); location.reload(); }
-function closeModals() { document.getElementById('modalBooking').classList.add('hidden'); }
+function closeModals() { 
+    document.getElementById('clientName').value = "";
+    document.getElementById('clientObs').value = "";
+    document.getElementById('modalBooking').classList.add('hidden'); 
+}
 function changeMonth(v) { curMonth += v; renderCalendar(); }
 
 function shareAgenda() { 
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?id=${userToken}`;
-    navigator.clipboard.writeText(shareUrl).then(() => alert("Link copiado: " + shareUrl)); 
+    navigator.clipboard.writeText(shareUrl).then(() => alert(t('linkCopied') + shareUrl)); 
 }
 
-function placeOrder() { window.open(`https://wa.me/5521991455681?text=Quero adquirir minha licença MKBAgenda`, '_blank'); }
+function placeOrder() { window.open(`https://wa.me/5521991455681?text=Quero adquirir minha licenca MKBAgenda`, '_blank'); }
 
 window.onload = async () => {
+    applyTranslations();
     const id = new URLSearchParams(window.location.search).get('id');
     const savedUser = localStorage.getItem('mkb_user');
 
@@ -550,7 +945,7 @@ window.onload = async () => {
             loadData(loggedUser);
             showScreen('agendaCore');
         } else {
-            alert("Agenda não encontrada");
+            alert("Agenda nao encontrada");
         }
     } else if(savedUser) {
         loggedUser = savedUser.replace(/\./g, '_');
